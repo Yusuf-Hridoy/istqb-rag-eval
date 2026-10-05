@@ -69,7 +69,7 @@ def get_settings() -> Settings:
         last_content_page=_int("LAST_CONTENT_PAGE", 63),
         chroma_dir=_path("CHROMA_DIR", ".chroma"),
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
-        judge_model=_str("JUDGE_MODEL", "gemini-3.5-flash"),
+        judge_model=_str("JUDGE_MODEL", "qwen/qwen3.8-27b"),
         golden_path=_path("GOLDEN_PATH", "data/golden.jsonl"),
         runs_dir=_path("RUNS_DIR", "runs"),
     )

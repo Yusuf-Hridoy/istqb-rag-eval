@@ -1,14 +1,22 @@
 """Offline tests for eval scoring, routing, resume and reporting."""
 
+import csv
 import math
+
+import pytest
 
 from istqb_rag.eval.dataset import GoldenRow
 from istqb_rag.eval.generate import run_generate
-from istqb_rag.eval.report import build_summary
+from istqb_rag.eval.report import RunInvalid, build_summary, failed_nan_metrics, run_report
 from istqb_rag.eval.score import (
     METRIC_KEYS,
     SCORES_COLUMNS,
+    JudgeQuotaExhausted,
+    ScoreOutcome,
+    is_daily_quota_error,
+    is_quota_error,
     metrics_for,
+    retry_after_seconds,
     run_score,
     scope_verdict,
 )
@@ -91,7 +99,7 @@ def test_run_score_writes_committed_columns_only(tmp_path):
     def fake_scorer(question, response, reference, contexts, metric_keys):
         assert reference == "reference answer"
         assert contexts == ["context text"]
-        return {k: 0.5 for k in metric_keys}
+        return ScoreOutcome(values={k: 0.5 for k in metric_keys}, calls=len(metric_keys))
 
     stats = run_score("test-run", rows, fake_scorer, settings=settings)
     assert stats["scored"] == 2
@@ -174,7 +182,9 @@ def test_build_summary_groups_and_nans():
     overall = summary["overall"]["context_precision"]
     assert overall["mean"] == 0.5  # (1.0 + 0.0) / 2, NaN excluded
     assert overall["scored"] == 2
-    assert overall["nan"] == 4
+    # expected = the 3 in_scope non-error rows; only q003's NaN is a real failure
+    assert overall["expected"] == 3
+    assert overall["nan"] == 1
 
     ch1 = summary["by_chapter"]["1"]["context_precision"]
     assert ch1["mean"] == 0.5 and ch1["scored"] == 2
@@ -205,3 +215,180 @@ def test_error_threshold_fails_run():
     summary = build_summary(rows)
     assert summary["errors"]["count"] == 4
     assert summary["errors"]["error_rate_ok"] is False  # 4/5 = 80% > 5%
+
+
+def _read_scores(settings, run_id):
+    with (settings.runs_dir / run_id / "scores.csv").open() as f:
+        return list(csv.DictReader(f))
+
+
+def _write_scores(path, rows):
+    with path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=SCORES_COLUMNS)
+        writer.writeheader()
+        for row in rows:
+            out = dict(row)
+            out["multi_chunk"] = str(out["multi_chunk"]).lower()
+            for key in METRIC_KEYS:
+                out[key] = "" if math.isnan(out[key]) else f"{out[key]:.4f}"
+            writer.writerow(out)
+
+
+# --- Quota handling, resume correctness and the NaN guard (Part B) ---------
+
+
+class _QuotaError(Exception):
+    """Stands in for GoogleRateLimitError / groq.RateLimitError."""
+
+    def __init__(self):
+        super().__init__("429 RESOURCE_EXHAUSTED: quota exceeded for this model")
+
+
+def test_is_quota_error_recognises_provider_wording():
+    assert is_quota_error(_QuotaError())
+    assert is_quota_error(Exception("Error code: 429 - rate limit reached"))
+    assert not is_quota_error(ValueError("could not parse judge output"))
+
+
+def test_quota_error_stops_scoring_and_saves_nothing(tmp_path):
+    """A quota failure stops the stage; the failing row is never written."""
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001"), _row("q002"), _row("q003")]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+
+    calls = []
+
+    def quota_scorer(question, response, reference, contexts, metric_keys):
+        calls.append(question)
+        if len(calls) == 1:
+            return ScoreOutcome(values={k: 0.5 for k in metric_keys})
+        return ScoreOutcome(api_error="429 RESOURCE_EXHAUSTED", quota_exhausted=True)
+
+    with pytest.raises(JudgeQuotaExhausted):
+        run_score("test-run", rows, quota_scorer, settings=settings)
+
+    saved = _read_scores(settings, "test-run")
+    assert [r["id"] for r in saved] == ["q001"]  # q002 not written, q003 never attempted
+    assert len(calls) == 2  # stopped immediately, did not go on to q003
+
+
+def test_rerun_after_quota_resumes_from_the_unscored_row(tmp_path):
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001"), _row("q002"), _row("q003")]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+
+    def quota_on_second(question, response, reference, contexts, metric_keys):
+        if "q001" not in question:
+            return ScoreOutcome(api_error="429", quota_exhausted=True)
+        return ScoreOutcome(values={k: 0.5 for k in metric_keys})
+
+    with pytest.raises(JudgeQuotaExhausted):
+        run_score("test-run", rows, quota_on_second, settings=settings)
+
+    seen = []
+
+    def good_scorer(question, response, reference, contexts, metric_keys):
+        seen.append(question)
+        return ScoreOutcome(values={k: 0.9 for k in metric_keys})
+
+    stats = run_score("test-run", rows, good_scorer, settings=settings)
+    assert stats["skipped"] == 1  # q001 already saved
+    assert len(seen) == 2  # only q002 and q003 were re-judged
+    assert [r["id"] for r in _read_scores(settings, "test-run")] == ["q001", "q002", "q003"]
+
+
+def test_api_error_nan_is_not_saved_but_parse_failure_nan_is(tmp_path):
+    """The two kinds of NaN are treated differently (brief: resume correctness)."""
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001"), _row("q002")]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+
+    def mixed_scorer(question, response, reference, contexts, metric_keys):
+        if "q001" in question:
+            # Judge answered but Ragas could not read it: a real measurement.
+            return ScoreOutcome(values={k: math.nan for k in metric_keys})
+        # Judge never answered: not a measurement at all.
+        return ScoreOutcome(api_error="ConnectionError: judge unreachable")
+
+    stats = run_score("test-run", rows, mixed_scorer, settings=settings)
+    assert stats["api_errors"] == 1
+    saved = _read_scores(settings, "test-run")
+    assert [r["id"] for r in saved] == ["q001"]
+    assert saved[0]["context_precision"] == ""  # parse-failure NaN written as empty
+
+
+def test_nan_rate_counts_only_rows_the_routing_table_expected():
+    """An out_of_scope row has no faithfulness; that is not a parse failure."""
+    rows = [
+        _score_row("q001", cp=0.8, cr=0.8, f=0.8, rr=0.8),
+        _score_row(
+            "q002",
+            row_type="out_of_scope",
+            status="refused",
+            cp=math.nan,
+            cr=math.nan,
+            f=math.nan,
+            rr=math.nan,
+        ),
+    ]
+    stats = build_summary(rows)["overall"]["faithfulness"]
+    assert stats["expected"] == 1 and stats["nan"] == 0 and stats["nan_rate"] == 0.0
+
+
+def test_report_refuses_to_write_summary_when_nans_exceed_10_percent(tmp_path):
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    run_dir = settings.runs_dir / "bad-run"
+    run_dir.mkdir(parents=True)
+    # 10 in-scope answered rows, 3 with an unparseable faithfulness verdict.
+    rows = [_score_row(f"q{i:03d}", f=(math.nan if i < 3 else 0.9)) for i in range(10)]
+    _write_scores(run_dir / "scores.csv", rows)
+
+    with pytest.raises(RunInvalid, match="faithfulness"):
+        run_report("bad-run", settings=settings)
+    assert not (run_dir / "summary.json").exists()
+
+
+def test_report_writes_summary_when_nans_are_within_budget(tmp_path):
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    run_dir = settings.runs_dir / "ok-run"
+    run_dir.mkdir(parents=True)
+    rows = [_score_row(f"q{i:03d}", f=(math.nan if i == 0 else 0.9)) for i in range(20)]
+    _write_scores(run_dir / "scores.csv", rows)
+
+    summary = run_report("ok-run", settings=settings)
+    assert (run_dir / "summary.json").exists()
+    assert summary["overall"]["faithfulness"]["nan"] == 1
+    assert failed_nan_metrics(summary) == []
+
+
+GROQ_OTPM = (
+    "Error code: 429 - {'error': {'message': 'Rate limit reached for model "
+    "`qwen/qwen3.8-27b` on output tokens per minute (OTPM): Limit 1000, Used 338, "
+    "Requested 674. Please try again in 720ms."
+)
+GEMINI_DAILY = (
+    "429 RESOURCE_EXHAUSTED quota exceeded for generate_content_free_tier_requests, "
+    "limit: 20 ... 'retryDelay': '45700s'"
+)
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        (GROQ_OTPM, 0.72),  # the trailing full stop must not read as minutes
+        ("Please try again in 1m30s.", 90.0),
+        ("Please try again in 2h5m.", 7500.0),
+        (GEMINI_DAILY, 45700.0),
+        ("no wait mentioned", None),
+    ],
+)
+def test_retry_after_seconds_parses_provider_wording(text, expected):
+    assert retry_after_seconds(Exception(text)) == expected
+
+
+def test_per_minute_limit_is_not_treated_as_daily_exhaustion():
+    """A 720ms token-bucket wait must be retried, not stop the whole run."""
+    assert not is_daily_quota_error(Exception(GROQ_OTPM))
+    assert is_daily_quota_error(Exception(GEMINI_DAILY))
+    assert is_daily_quota_error(Exception("429: limit 1000 requests per day"))
+    assert not is_daily_quota_error(ValueError("could not parse judge output"))

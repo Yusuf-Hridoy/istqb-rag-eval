@@ -1,4 +1,4 @@
-"""Stage 2 of the eval: score saved answers with Ragas + the Gemini judge.
+"""Stage 2 of the eval: score saved answers with Ragas and an LLM judge.
 
 Two stages exist so answers are generated once and can be re-scored later
 (Phase 3's judge-variance check depends on it).
@@ -7,15 +7,27 @@ Scoring is routed per row (see ``metrics_for``) and each result is appended to
 scores.csv immediately, with the same resume behaviour as stage 1. scores.csv
 is committed and holds IDs, statuses and scores only — never question,
 answer or syllabus text.
+
+Two kinds of NaN are deliberately kept apart:
+
+* an **API error** (the judge never answered) means the row was not measured.
+  It is not written, so a rerun retries it.
+* a **parse failure** (the judge answered, Ragas could not read it) is a real
+  measurement outcome. It is written as an empty cell and counted.
 """
 
 import csv
 import json
 import math
 import os
+import re
+import time
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.embeddings import Embeddings
 
 from istqb_rag.config import Settings, get_settings
@@ -43,9 +55,147 @@ SCORES_COLUMNS = [
     "possible_hallucination",
 ]
 
-# Scorer signature: (question, response, reference, contexts, metric_keys)
-# -> {metric_key: float} where NaN means the judge output could not be parsed.
-ScorerFn = Callable[[str, str, str | None, list[str], list[str]], dict[str, float]]
+_QUOTA_MARKERS = (
+    "resource_exhausted",
+    "rate limit",
+    "ratelimit",
+    "quota",
+    "429",
+    "too many requests",
+)
+# A daily cap is worth stopping for; a per-minute bucket just needs a wait.
+_DAILY_MARKERS = ("per day", "perday", "requestsperday", "daily limit")
+# Anything the provider asks us to wait longer than this is treated as a cap
+# we cannot wait out inside one run.
+DAILY_WAIT_THRESHOLD_S = 300.0
+MAX_ROW_ATTEMPTS = 4
+MAX_SLEEP_S = 90.0
+
+
+class JudgeQuotaExhausted(RuntimeError):
+    """The judge refused a call for quota reasons; the score stage must stop."""
+
+
+def is_quota_error(exc: BaseException) -> bool:
+    """True when an exception is the judge refusing on rate-limit grounds."""
+    text = f"{type(exc).__name__} {exc}".lower()
+    return any(marker in text for marker in _QUOTA_MARKERS)
+
+
+def retry_after_seconds(exc: BaseException) -> float | None:
+    """How long the provider asked us to wait, in seconds, if it said so.
+
+    Groq phrases it as "try again in 720ms" / "in 1m30s"; Gemini returns a
+    retryDelay like "45700s".
+    """
+    text = str(exc)
+    patterns = [
+        r"try again in\s+([0-9hms.]+)",
+        r"retrydelay['\"]?:\s*['\"]?([0-9hms.]+)",
+        r"retry in\s+([0-9hms.]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        # Trim the sentence's full stop; "720ms." must not read as 720 minutes.
+        raw = match.group(1).strip(".")
+        if not raw:
+            continue
+        ms = re.fullmatch(r"([0-9.]+)ms", raw)
+        if ms:
+            return float(ms.group(1)) / 1000
+        total, found = 0.0, False
+        for value, unit in re.findall(r"([0-9.]+)\s*([hms])", raw):
+            total += float(value) * {"h": 3600, "m": 60, "s": 1}[unit]
+            found = True
+        if found:
+            return total
+        if raw.replace(".", "").isdigit():
+            return float(raw)
+    return None
+
+
+def is_daily_quota_error(exc: BaseException) -> bool:
+    """True only for a cap this run cannot wait out — not a per-minute bucket.
+
+    A per-minute token bucket reports a wait of seconds and must be retried;
+    treating it as exhaustion would stop the run every few rows and no baseline
+    would ever finish.
+    """
+    if not is_quota_error(exc):
+        return False
+    text = f"{type(exc).__name__} {exc}".lower()
+    if any(marker in text for marker in _DAILY_MARKERS):
+        return True
+    wait = retry_after_seconds(exc)
+    return wait is not None and wait > DAILY_WAIT_THRESHOLD_S
+
+
+@dataclass
+class ScoreOutcome:
+    """What one row's scoring produced, and whether it can be trusted."""
+
+    values: dict[str, float] = field(default_factory=dict)
+    calls: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    api_error: str | None = None
+    quota_exhausted: bool = False
+
+    @property
+    def measured(self) -> bool:
+        """Only a row with no API error is a real measurement worth saving."""
+        return self.api_error is None and not self.quota_exhausted
+
+
+# (question, response, reference, contexts, metric_keys) -> ScoreOutcome
+ScorerFn = Callable[[str, str, str | None, list[str], list[str]], ScoreOutcome]
+
+
+class JudgeCallCounter(BaseCallbackHandler):
+    """Counts judge calls and tokens, and records the errors Ragas swallows.
+
+    Ragas turns a failed judge call into a NaN score, which is
+    indistinguishable from a parse failure. Watching on_llm_error is what lets
+    the two be told apart.
+    """
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.errors: list[BaseException] = []
+
+    def reset(self) -> None:
+        self.__init__()
+
+    def on_llm_start(self, serialized: dict, prompts: list[str], **kwargs: Any) -> None:
+        self.calls += 1
+
+    def on_chat_model_start(self, serialized: dict, messages: list, **kwargs: Any) -> None:
+        self.calls += 1
+
+    def on_llm_end(self, response: Any, **kwargs: Any) -> None:
+        usage = (getattr(response, "llm_output", None) or {}).get("token_usage") or {}
+        if not usage:
+            for generations in getattr(response, "generations", []) or []:
+                for gen in generations:
+                    meta = getattr(getattr(gen, "message", None), "response_metadata", {}) or {}
+                    usage = meta.get("token_usage") or usage
+        self.prompt_tokens += int(usage.get("prompt_tokens", 0) or 0)
+        self.completion_tokens += int(usage.get("completion_tokens", 0) or 0)
+
+    def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
+        self.errors.append(error)
+
+    @property
+    def quota_exhausted(self) -> bool:
+        return any(is_quota_error(e) for e in self.errors)
+
+    @property
+    def first_error(self) -> str | None:
+        return f"{type(self.errors[0]).__name__}: {self.errors[0]}"[:300] if self.errors else None
 
 
 def metrics_for(row_type: str, status: str) -> list[str]:
@@ -95,10 +245,31 @@ class _FastEmbedForRagas(Embeddings):
         return self._inner.embed_query(text)
 
 
+def build_judge(settings: Settings):
+    """The judge chat model, chosen by JUDGE_MODEL's provider prefix.
+
+    Gemini names route to Google; everything else is a Groq model id. Either
+    way the judge is a different model family from the answer model.
+    """
+    if settings.judge_model.startswith("gemini"):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        key = os.environ.get("GEMINI_API_KEY", "")
+        if not key:
+            raise ValueError("GEMINI_API_KEY is not set — add it to .env (see .env.example).")
+        return ChatGoogleGenerativeAI(model=settings.judge_model, temperature=0, api_key=key)
+
+    from langchain_groq import ChatGroq
+
+    key = settings.groq_api_key
+    if not key:
+        raise ValueError("GROQ_API_KEY is not set — add it to .env (see .env.example).")
+    return ChatGroq(model=settings.judge_model, temperature=0, api_key=key)
+
+
 def make_scorer(settings: Settings | None = None) -> ScorerFn:
-    """Build the real Ragas scorer: Gemini judge + bge-small embeddings."""
+    """Build the real Ragas scorer: the configured judge + bge-small embeddings."""
     settings = settings or get_settings()
-    from langchain_google_genai import ChatGoogleGenerativeAI
     from ragas.dataset_schema import EvaluationDataset, SingleTurnSample
     from ragas.embeddings import LangchainEmbeddingsWrapper
     from ragas.evaluation import evaluate
@@ -106,24 +277,22 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
     from ragas.metrics import answer_relevancy, context_precision, context_recall, faithfulness
     from ragas.run_config import RunConfig
 
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
-    if not gemini_key:
-        raise ValueError("GEMINI_API_KEY is not set — add it to .env (see .env.example).")
-    judge = LangchainLLMWrapper(
-        ChatGoogleGenerativeAI(model=settings.judge_model, temperature=0, api_key=gemini_key)
-    )
+    judge = LangchainLLMWrapper(build_judge(settings))
     embeddings = LangchainEmbeddingsWrapper(_FastEmbedForRagas(settings.embed_model))
     # Ragas' answer_relevancy asks the judge for `strictness` candidates in one
     # call (n=3); the Gemini API rejects n>1 with "Multiple candidates is not
     # enabled for this model". strictness=1 is the supported equivalent.
     answer_relevancy.strictness = 1
-    run_config = RunConfig(max_workers=2, max_retries=3, timeout=180)
+    # max_workers=1: one row's ~11k tokens already exceeds the judge's
+    # per-minute token bucket, so parallel rows only cause 429s.
+    run_config = RunConfig(max_workers=1, max_retries=3, timeout=180)
     ragas_metrics = {
         "context_precision": context_precision,
         "context_recall": context_recall,
         "faithfulness": faithfulness,
         "response_relevancy": answer_relevancy,
     }
+    counter = JudgeCallCounter()
 
     def score_row(
         question: str,
@@ -131,7 +300,7 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
         reference: str | None,
         contexts: list[str],
         metric_keys: list[str],
-    ) -> dict[str, float]:
+    ) -> ScoreOutcome:
         sample = SingleTurnSample(
             user_input=question,
             retrieved_contexts=contexts,
@@ -139,18 +308,53 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
             reference=reference,
         )
         dataset = EvaluationDataset(samples=[sample])
-        result = evaluate(
-            dataset,
-            metrics=[ragas_metrics[k] for k in metric_keys],
-            llm=judge,
-            embeddings=embeddings,
-            run_config=run_config,
-            show_progress=False,
-        )
-        row_scores = result.to_pandas().iloc[0]
-        # Ragas names the column after the metric object, which is not always our
-        # key: response_relevancy is Ragas' answer_relevancy. Look up by .name.
-        return {k: float(row_scores[ragas_metrics[k].name]) for k in metric_keys}
+
+        for attempt in range(1, MAX_ROW_ATTEMPTS + 1):
+            counter.reset()
+            result = None
+            error: BaseException | None = None
+            try:
+                result = evaluate(
+                    dataset,
+                    metrics=[ragas_metrics[k] for k in metric_keys],
+                    llm=judge,
+                    embeddings=embeddings,
+                    run_config=run_config,
+                    callbacks=[counter],
+                    show_progress=False,
+                )
+            except Exception as exc:  # noqa: BLE001 — any judge failure is "not measured"
+                error = exc
+            else:
+                # Ragas swallows per-call failures into NaN; the callback is the
+                # only place they are still visible.
+                error = counter.errors[0] if counter.errors else None
+
+            if error is None:
+                # Ragas names the column after the metric object, which is not
+                # always our key: response_relevancy is Ragas' answer_relevancy.
+                row_scores = result.to_pandas().iloc[0]
+                return ScoreOutcome(
+                    values={k: float(row_scores[ragas_metrics[k].name]) for k in metric_keys},
+                    calls=counter.calls,
+                    prompt_tokens=counter.prompt_tokens,
+                    completion_tokens=counter.completion_tokens,
+                )
+
+            detail = f"{type(error).__name__}: {error}"[:300]
+            if is_daily_quota_error(error):
+                return ScoreOutcome(calls=counter.calls, api_error=detail, quota_exhausted=True)
+
+            if is_quota_error(error) and attempt < MAX_ROW_ATTEMPTS:
+                wait = min(retry_after_seconds(error) or 5.0 * attempt, MAX_SLEEP_S)
+                print(f"  rate limited, waiting {wait:.1f}s (attempt {attempt}/{MAX_ROW_ATTEMPTS})")
+                time.sleep(wait)
+                continue
+
+            # Out of attempts, or a non-quota failure: not a measurement.
+            return ScoreOutcome(calls=counter.calls, api_error=detail)
+
+        return ScoreOutcome(api_error="exhausted judge retries")
 
     return score_row
 
@@ -184,14 +388,21 @@ def run_score(
     *,
     settings: Settings | None = None,
 ) -> dict[str, int]:
-    """Score every answered row, appending each scores.csv line immediately."""
+    """Score every answered row, appending each scores.csv line immediately.
+
+    Raises JudgeQuotaExhausted as soon as the judge reports a quota failure,
+    without writing that row, so rerunning the same command picks up where it
+    stopped.
+    """
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     answers = _load_answers(run_dir / "answers.jsonl")
     scores_path = run_dir / "scores.csv"
     done = _existing_scores(scores_path)
 
-    scored = skipped = judged = 0
+    pending = [r for r in rows if r.id not in done and r.id in answers]
+    scored = skipped = judged = api_errors = 0
+    calls = prompt_tokens = completion_tokens = 0
     write_header = not scores_path.exists()
     with scores_path.open("a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCORES_COLUMNS)
@@ -205,15 +416,30 @@ def run_score(
             if result is None:
                 continue
             metrics = metrics_for(row.type, result.status)
-            values: dict[str, float] = {}
+            outcome = ScoreOutcome()
             if metrics:
-                values = scorer(
+                outcome = scorer(
                     row.question,
                     result.answer,
                     row.reference,
                     [c.text for c in result.contexts],
                     metrics,
                 )
+                calls += outcome.calls
+                prompt_tokens += outcome.prompt_tokens
+                completion_tokens += outcome.completion_tokens
+                if outcome.quota_exhausted:
+                    remaining = len([r for r in pending if r.id not in done])
+                    print(
+                        f"Judge quota exhausted — {remaining} rows left, "
+                        "rerun the same command later."
+                    )
+                    raise JudgeQuotaExhausted(outcome.api_error or "judge quota exhausted")
+                if not outcome.measured:
+                    # Not written, so a rerun retries this row.
+                    api_errors += 1
+                    print(f"[skip] {row.id}: judge API error, not saved ({outcome.api_error})")
+                    continue
                 judged += 1
             correct, flag = scope_verdict(row.type, result.status)
             record = {
@@ -229,10 +455,19 @@ def run_score(
                 "possible_hallucination": flag,
             }
             for key in METRIC_KEYS:
-                value = values.get(key, math.nan)
+                value = outcome.values.get(key, math.nan)
                 record[key] = "" if math.isnan(value) else f"{value:.4f}"
             writer.writerow(record)
             f.flush()
+            done.add(row.id)
             scored += 1
-            print(f"[{scored}] {row.id}: status={result.status} metrics={len(values)}")
-    return {"scored": scored, "skipped": skipped, "judged": judged}
+            print(f"[{scored}] {row.id}: status={result.status} metrics={len(outcome.values)}")
+    return {
+        "scored": scored,
+        "skipped": skipped,
+        "judged": judged,
+        "api_errors": api_errors,
+        "judge_calls": calls,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+    }

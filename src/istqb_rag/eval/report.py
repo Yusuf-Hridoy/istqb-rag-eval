@@ -7,10 +7,15 @@ import statistics
 from pathlib import Path
 
 from istqb_rag.config import Settings, get_settings
-from istqb_rag.eval.score import METRIC_KEYS
+from istqb_rag.eval.score import METRIC_KEYS, metrics_for
 
 ERROR_RATE_LIMIT = 0.05
+NAN_RATE_LIMIT = 0.10
 WORST_N = 10
+
+
+class RunInvalid(RuntimeError):
+    """Too many judge outputs failed to parse for the run to mean anything."""
 
 
 def load_scores(scores_path: Path) -> list[dict]:
@@ -28,15 +33,28 @@ def load_scores(scores_path: Path) -> list[dict]:
     return rows
 
 
+def _expects(row: dict, key: str) -> bool:
+    """Whether the routing table says this row should have had this metric."""
+    return key in metrics_for(row["type"], row["status"])
+
+
 def _metric_stats(rows: list[dict]) -> dict:
+    """Means and NaN counts per metric.
+
+    NaN is only counted for rows the routing table says should have been
+    judged — a row that was never meant to get a metric is not a failure.
+    """
     stats = {}
     for key in METRIC_KEYS:
-        values = [r[key] for r in rows if not math.isnan(r[key])]
-        nan_count = sum(1 for r in rows if math.isnan(r[key]))
+        expected = [r for r in rows if _expects(r, key)]
+        values = [r[key] for r in expected if not math.isnan(r[key])]
+        nan_count = sum(1 for r in expected if math.isnan(r[key]))
         stats[key] = {
             "mean": round(sum(values) / len(values), 4) if values else None,
             "scored": len(values),
+            "expected": len(expected),
             "nan": nan_count,
+            "nan_rate": round(nan_count / len(expected), 4) if expected else 0.0,
         }
     return stats
 
@@ -159,13 +177,37 @@ def _print_table(summary: dict) -> None:
     print(f"latency: median {lat['median']:.0f} ms, p95 {lat['p95']:.0f} ms")
 
 
+def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tuple[str, float]]:
+    """Metrics whose parse-failure NaN rate is above the limit."""
+    return [
+        (key, stats["nan_rate"])
+        for key, stats in summary["overall"].items()
+        if stats["expected"] and stats["nan_rate"] > limit
+    ]
+
+
 def run_report(run_id: str, *, settings: Settings | None = None) -> dict:
+    """Aggregate a run into summary.json.
+
+    Raises RunInvalid — without writing summary.json — when any metric's
+    parse-failure rate is above NAN_RATE_LIMIT, so a judge that mostly failed
+    to produce readable output can never be mistaken for a valid baseline.
+    """
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     rows = load_scores(run_dir / "scores.csv")
     summary = build_summary(rows)
+    _print_table(summary)
+
+    bad = failed_nan_metrics(summary)
+    if bad:
+        detail = ", ".join(f"{k} {rate * 100:.1f}%" for k, rate in bad)
+        raise RunInvalid(
+            f"judge output failed to parse above {NAN_RATE_LIMIT * 100:.0f}% for: {detail}. "
+            "summary.json was not written — this run is not a valid baseline."
+        )
+
     summary_path = run_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
-    _print_table(summary)
     print(f"\nwrote {summary_path}")
     return summary

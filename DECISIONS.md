@@ -96,3 +96,103 @@ brief; only pipeline failures (status `error`) use `st.error`.
 The app checks that `.chroma/` exists and is non-empty before offering the chat;
 otherwise it shows the ingest command. It does not validate the collection
 schema — the simplest proxy that avoids a broken chat UI.
+
+## Judge model: qwen/qwen3.8-27b on Groq (Phase 2)
+
+The brief called for Gemini as the judge, a different family from the
+gpt-oss-120b answer model. That ran into a hard wall, so the judge moved to
+Groq. The history, all of it measured rather than assumed:
+
+1. `gemini-3.8-flash` was the first choice. It is a real model and answers
+   normally, but the 429 payload reports
+   `quotaId=GenerateRequestsPerDayPerProjectPerModel-FreeTier, quotaValue=20`
+   — **20 requests per day, per model**, on this account's free tier.
+2. `gemini-3.5-flash` was tried next and reported exactly the same 20/day cap.
+   `gemini-flash-latest` is an alias for 3.8-flash and shares its quota.
+3. A measured row needs **8 judge calls** (see `measure` below), so a 60-row
+   baseline needs ~480 calls. At 20/day that is roughly 24 days per run, which
+   makes the judge-variance work in Phase 3 impossible.
+4. The exact free-tier RPD for `gemini-3.1-flash-lite` could not be confirmed:
+   the rate-limit docs page defers to AI Studio, which needs an interactive
+   login, and probing it would have burned the quota being measured. Every
+   Gemini model whose cap *was* observed on this account reported 20/day, and
+   the quota id is per-project-per-model, so there is no reason to expect
+   3.1-flash-lite to differ. Treated as < 400/day.
+
+So the judge is **`qwen/qwen3.8-27b` on Groq**, still a different model family
+from `openai/gpt-oss-120b`. Note the brief named `qwen/qwen3.6-27b`, which does
+not exist on Groq; `qwen/qwen3.8-27b` is the Qwen model actually served.
+
+Measured Groq limits for it (from `x-ratelimit-*` response headers):
+
+| Limit | Value |
+|---|---|
+| Requests | 1000/day (reported 991 remaining) |
+| Tokens | 8000/minute |
+
+The request budget fits a 480-call baseline comfortably. The **token** budget is
+the binding constraint: one row costs ~9.1k prompt + ~1.9k completion tokens,
+so a single row exceeds the per-minute token bucket. Expect the baseline to be
+paced by TPM (roughly 80+ minutes for 60 rows) and to hit transient 429s. That
+is what the stop-and-resume behaviour below is for.
+
+`JUDGE_MODEL` still selects the provider: a `gemini*` name routes to
+`ChatGoogleGenerativeAI`, anything else is treated as a Groq model id.
+
+## Ragas 0.4.3: three API differences from the brief
+
+All three were found by running the scorer, and each one silently produced NaN
+rather than an error, so they are worth recording.
+
+1. **Metric column names.** `evaluate(...).to_pandas()` names each column after
+   the metric object, not our key. `response_relevancy` is Ragas'
+   `answer_relevancy`, so looking the column up by our own key raised
+   `KeyError`. We now look up by `metric.name`.
+2. **`answer_relevancy` asks for multiple candidates.** It calls the judge with
+   `n=self.strictness` (default 3). The Gemini API rejects that with
+   `400 INVALID_ARGUMENT: Multiple candidates is not enabled for this model`.
+   We set `answer_relevancy.strictness = 1`. Kept after the move to Groq so the
+   judge stays swappable.
+3. **FastEmbed breaks Ragas' telemetry.** `LangchainEmbeddingsWrapper` builds an
+   `EmbeddingUsageEvent` with `getattr(embeddings, "model", None)` and pydantic
+   requires a string, but `FastEmbedEmbeddings.model` is a `TextEmbedding`
+   object. The ValidationError turned every embedding-backed metric into NaN.
+   `_FastEmbedForRagas` in `eval/score.py` wraps it and exposes `.model` as the
+   model-name string.
+
+Ragas 0.4.3 also warns that importing from `ragas.metrics` is deprecated and
+will be removed in v1.0, in favour of `ragas.metrics.collections`. We stay on
+`ragas.metrics` for Phase 2 because the version is pinned in `uv.lock` and the
+brief asks for a stable baseline; migrating is a Phase 3 chore.
+
+## Quota handling and the two kinds of NaN
+
+A NaN from Ragas means two very different things, and conflating them produced
+a run that looked finished but measured nothing:
+
+* **API error** — the judge never answered. The row was not measured, so it is
+  *not* written to scores.csv and a rerun retries it.
+* **Parse failure** — the judge answered and Ragas could not read it. That is a
+  real outcome, so it is written as an empty cell and counted.
+
+`JudgeCallCounter` (a LangChain callback) tells them apart by watching
+`on_llm_error`, which is also where the per-row call and token counts come
+from. On a 429 the score stage stops immediately, prints how many rows are
+left, and leaves them unscored so the same command resumes.
+
+`run_report` refuses to write summary.json when any metric's parse-failure rate
+is above 10%, so a judge that mostly failed can never be mistaken for a
+baseline. NaN counts are now taken only over rows the routing table says should
+have been judged — previously an out-of-scope row counted as four NaNs.
+
+## Phase 3 candidates
+
+* **Lower TOP_K to cut judge cost.** Context precision asks the judge once per
+  retrieved context, so at `TOP_K=4` it is half of the 8 calls a row costs.
+  Dropping to `TOP_K=3` would cut the baseline by roughly 60 calls and a
+  proportional slice of the token bill. Not touched in Phase 2, which measures
+  the Phase 1 system exactly as it is.
+* Migrate off the deprecated `ragas.metrics` imports.
+* Re-check whether a paid Gemini tier makes the original cross-provider judge
+  (Gemini judging Groq) affordable, which would be a cleaner independence story
+  than Qwen judging gpt-oss.
