@@ -7,10 +7,13 @@ from tests.conftest import fake_page, make_settings
 
 
 def test_repeated_header_footer_lines_removed_body_kept():
+    def make_page(body: str, n: int) -> str:
+        return f"ISTQB Certified Tester Foundation Level\nPage {n} of 78\n{body}"
+
     pages = [
-        "ISTQB Certified Tester Foundation Level\nPage 1 of 78\n1.1 What is testing?\nTesting is important.",
-        "ISTQB Certified Tester Foundation Level\nPage 2 of 78\n1.2 Why is testing?\nBecause defects exist.",
-        "ISTQB Certified Tester Foundation Level\nPage 3 of 78\n1.3 Testing principles\nSeven principles apply.",
+        make_page("1.1 What is testing?\nTesting is important.", 1),
+        make_page("1.2 Why is testing?\nBecause defects exist.", 2),
+        make_page("1.3 Testing principles\nSeven principles apply.", 3),
     ]
     cleaned = remove_repeated_lines(pages)
     assert all("ISTQB Certified Tester Foundation Level" not in text for text in cleaned)

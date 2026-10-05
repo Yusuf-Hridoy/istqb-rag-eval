@@ -69,6 +69,7 @@ def test_error_result_when_groq_key_missing(store):
     [
         ("See [p. 42] for details.", [42]),
         ("First [p. 42] then more [p. 43] and back [p. 42].", [42, 43]),
+        ("CJK style 【p. 40】 is parsed too.", [40]),
         ("No citations here.", []),
     ],
 )

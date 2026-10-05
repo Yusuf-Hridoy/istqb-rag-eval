@@ -16,11 +16,13 @@ from istqb_rag import prompts
 from istqb_rag.config import Settings, get_settings
 from istqb_rag.models import RagResult, RetrievedChunk
 
-_CITATION_RE = re.compile(r"\[p\.\s*(\d+)\]")
+_CITATION_RE = re.compile(r"[\[【]p\.\s*(\d+)[\]】]")
 
 
 def parse_cited_pages(text: str) -> list[int]:
-    """Extract page numbers from ``[p. N]`` citations, deduplicated, in order."""
+    """Extract page numbers from ``[p. N]`` citations, deduplicated, in order.
+
+    Also accepts the CJK brackets (【p. N】) some models emit."""
     pages: list[int] = []
     for match in _CITATION_RE.finditer(text):
         page = int(match.group(1))
