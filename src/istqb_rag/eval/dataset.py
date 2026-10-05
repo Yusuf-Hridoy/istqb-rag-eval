@@ -5,6 +5,7 @@ paraphrased reference answers only — never copied syllabus passages.
 """
 
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -33,6 +34,13 @@ REQUIRED_KEYS = {
 
 class DatasetError(ValueError):
     """Raised when data/golden.jsonl fails validation."""
+
+
+# The mix the Phase 2 brief specifies. The dataset is the product of this
+# project, so drifting from it silently would quietly change what the baseline
+# measures.
+EXPECTED_TYPE_COUNTS = {"in_scope": 60, "not_in_syllabus": 5, "out_of_scope": 10}
+EXPECTED_CHAPTER_COUNTS = {1: 10, 2: 8, 3: 6, 4: 18, 5: 14, 6: 4}
 
 
 @dataclass(frozen=True)
@@ -122,18 +130,52 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
     )
 
 
+def dataset_counts(rows: list[GoldenRow]) -> tuple[dict[str, int], dict[int, int]]:
+    """(rows per type, in-scope rows per chapter) for the whole dataset."""
+    types = Counter(r.type for r in rows)
+    chapters = Counter(r.chapter for r in rows if r.type == "in_scope")
+    return dict(types), dict(chapters)
+
+
+def check_mix(rows: list[GoldenRow]) -> None:
+    """Fail unless the type and chapter counts match the brief exactly.
+
+    Applied to the whole file, not the reviewed subset — reviewing is a
+    separate gate (MIN_REVIEWED_ROWS) and a half-reviewed file is not a
+    drafting error.
+    """
+    types, chapters = dataset_counts(rows)
+    problems = []
+    for name, want in EXPECTED_TYPE_COUNTS.items():
+        got = types.get(name, 0)
+        if got != want:
+            problems.append(f"type {name}: expected {want}, found {got}")
+    for chapter, want in EXPECTED_CHAPTER_COUNTS.items():
+        got = chapters.get(chapter, 0)
+        if got != want:
+            problems.append(f"chapter {chapter}: expected {want} in_scope, found {got}")
+    for chapter in sorted(set(chapters) - set(EXPECTED_CHAPTER_COUNTS)):
+        problems.append(f"chapter {chapter}: unexpected chapter with {chapters[chapter]} rows")
+    if problems:
+        raise DatasetError(
+            "golden.jsonl does not match the brief's mix:\n  " + "\n  ".join(problems)
+        )
+
+
 def load_golden(
     path: Path | None = None,
     *,
     include_unreviewed: bool = False,
     limit: int | None = None,
     settings: Settings | None = None,
+    validate_mix: bool = True,
 ) -> list[GoldenRow]:
     """Load and validate the golden dataset.
 
     By default only reviewed rows are returned. ``include_unreviewed`` is for
     dry runs only; any run using it must be labelled dry-run and is never
-    committed as a baseline.
+    committed as a baseline. ``validate_mix`` is only turned off by tests that
+    exercise row-level validation on a deliberately small file.
     """
     settings = settings or get_settings()
     path = path or settings.golden_path
@@ -155,6 +197,9 @@ def load_golden(
                 raise _fail(lineno, f"duplicate id: {row.id}")
             seen_ids.add(row.id)
             rows.append(row)
+
+    if validate_mix:
+        check_mix(rows)
 
     if not include_unreviewed:
         rows = [r for r in rows if r.reviewed]

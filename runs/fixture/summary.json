@@ -1,0 +1,510 @@
+{
+  "overall": {
+    "context_precision": {
+      "mean": 0.7911,
+      "scored": 60,
+      "expected": 60,
+      "nan": 0,
+      "nan_rate": 0.0
+    },
+    "context_recall": {
+      "mean": 0.7877,
+      "scored": 60,
+      "expected": 60,
+      "nan": 0,
+      "nan_rate": 0.0
+    },
+    "faithfulness": {
+      "mean": 0.7978,
+      "scored": 56,
+      "expected": 56,
+      "nan": 0,
+      "nan_rate": 0.0
+    },
+    "response_relevancy": {
+      "mean": 0.7635,
+      "scored": 56,
+      "expected": 56,
+      "nan": 0,
+      "nan_rate": 0.0
+    }
+  },
+  "by_chapter": {
+    "1": {
+      "context_precision": {
+        "mean": 0.8005,
+        "scored": 10,
+        "expected": 10,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8334,
+        "scored": 10,
+        "expected": 10,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.8146,
+        "scored": 9,
+        "expected": 9,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7462,
+        "scored": 9,
+        "expected": 9,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "2": {
+      "context_precision": {
+        "mean": 0.8014,
+        "scored": 8,
+        "expected": 8,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.7267,
+        "scored": 8,
+        "expected": 8,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.834,
+        "scored": 8,
+        "expected": 8,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7442,
+        "scored": 8,
+        "expected": 8,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "3": {
+      "context_precision": {
+        "mean": 0.8713,
+        "scored": 6,
+        "expected": 6,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.7678,
+        "scored": 6,
+        "expected": 6,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.7278,
+        "scored": 5,
+        "expected": 5,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7507,
+        "scored": 5,
+        "expected": 5,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "4": {
+      "context_precision": {
+        "mean": 0.8073,
+        "scored": 18,
+        "expected": 18,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8266,
+        "scored": 18,
+        "expected": 18,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.7535,
+        "scored": 17,
+        "expected": 17,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7755,
+        "scored": 17,
+        "expected": 17,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "5": {
+      "context_precision": {
+        "mean": 0.7613,
+        "scored": 14,
+        "expected": 14,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8003,
+        "scored": 14,
+        "expected": 14,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.8515,
+        "scored": 14,
+        "expected": 14,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7787,
+        "scored": 14,
+        "expected": 14,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "6": {
+      "context_precision": {
+        "mean": 0.658,
+        "scored": 4,
+        "expected": 4,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.6059,
+        "scored": 4,
+        "expected": 4,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.7679,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.749,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    }
+  },
+  "by_k_level": {
+    "K1": {
+      "context_precision": {
+        "mean": 0.8093,
+        "scored": 20,
+        "expected": 20,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.7861,
+        "scored": 20,
+        "expected": 20,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.8359,
+        "scored": 17,
+        "expected": 17,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7751,
+        "scored": 17,
+        "expected": 17,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "K2": {
+      "context_precision": {
+        "mean": 0.7655,
+        "scored": 28,
+        "expected": 28,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.7966,
+        "scored": 28,
+        "expected": 28,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.7637,
+        "scored": 28,
+        "expected": 28,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7477,
+        "scored": 28,
+        "expected": 28,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "K3": {
+      "context_precision": {
+        "mean": 0.8205,
+        "scored": 12,
+        "expected": 12,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.7696,
+        "scored": 12,
+        "expected": 12,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.8258,
+        "scored": 11,
+        "expected": 11,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.7856,
+        "scored": 11,
+        "expected": 11,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    }
+  },
+  "by_multi_chunk": {
+    "False": {
+      "context_precision": {
+        "mean": 0.828,
+        "scored": 39,
+        "expected": 39,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8367,
+        "scored": 39,
+        "expected": 39,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.8415,
+        "scored": 36,
+        "expected": 36,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.8095,
+        "scored": 36,
+        "expected": 36,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    },
+    "True": {
+      "context_precision": {
+        "mean": 0.7226,
+        "scored": 21,
+        "expected": 21,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.6966,
+        "scored": 21,
+        "expected": 21,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.719,
+        "scored": 20,
+        "expected": 20,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.6806,
+        "scored": 20,
+        "expected": 20,
+        "nan": 0,
+        "nan_rate": 0.0
+      }
+    }
+  },
+  "in_scope_answer_rate": {
+    "rate": 0.9333,
+    "answered": 56,
+    "total": 60,
+    "not_answered_ids": [
+      "q006",
+      "q023",
+      "q040",
+      "q057"
+    ]
+  },
+  "scope_handling": {
+    "out_of_scope_accuracy": 1.0,
+    "out_of_scope_total": 10,
+    "not_in_syllabus_accuracy": 0.8,
+    "not_in_syllabus_total": 5,
+    "possible_hallucination_ids": [
+      "q061"
+    ]
+  },
+  "errors": {
+    "count": 0,
+    "ids": [],
+    "error_rate": 0.0,
+    "error_rate_ok": true
+  },
+  "worst_10": [
+    {
+      "id": "q057",
+      "chapter": "6",
+      "k_level": "K1",
+      "status": "no_context",
+      "avg": 0.5858,
+      "context_precision": 0.6157,
+      "context_recall": 0.556,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q001",
+      "chapter": "1",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": 0.6023,
+      "context_precision": 0.6699,
+      "context_recall": 0.5022,
+      "faithfulness": 0.737,
+      "response_relevancy": 0.5003
+    },
+    {
+      "id": "q007",
+      "chapter": "1",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6209,
+      "context_precision": 0.6271,
+      "context_recall": 0.5853,
+      "faithfulness": 0.4854,
+      "response_relevancy": 0.7857
+    },
+    {
+      "id": "q033",
+      "chapter": "4",
+      "k_level": "K3",
+      "status": "answered",
+      "avg": 0.6445,
+      "context_precision": 0.6927,
+      "context_recall": 0.5669,
+      "faithfulness": 0.5944,
+      "response_relevancy": 0.724
+    },
+    {
+      "id": "q032",
+      "chapter": "4",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6482,
+      "context_precision": 0.6606,
+      "context_recall": 0.8914,
+      "faithfulness": 0.576,
+      "response_relevancy": 0.4648
+    },
+    {
+      "id": "q051",
+      "chapter": "5",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6522,
+      "context_precision": 0.7846,
+      "context_recall": 0.4838,
+      "faithfulness": 0.8216,
+      "response_relevancy": 0.519
+    },
+    {
+      "id": "q015",
+      "chapter": "2",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": 0.6671,
+      "context_precision": 0.9065,
+      "context_recall": 0.5292,
+      "faithfulness": 0.6098,
+      "response_relevancy": 0.6228
+    },
+    {
+      "id": "q059",
+      "chapter": "6",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6685,
+      "context_precision": 0.5629,
+      "context_recall": 0.5539,
+      "faithfulness": 0.5675,
+      "response_relevancy": 0.9896
+    },
+    {
+      "id": "q049",
+      "chapter": "5",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6704,
+      "context_precision": 0.566,
+      "context_recall": 0.9107,
+      "faithfulness": 0.5937,
+      "response_relevancy": 0.611
+    },
+    {
+      "id": "q058",
+      "chapter": "6",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.6856,
+      "context_precision": 0.7845,
+      "context_recall": 0.6349,
+      "faithfulness": 0.7844,
+      "response_relevancy": 0.5386
+    }
+  ],
+  "latency_ms": {
+    "median": 2468,
+    "p95": 4059.0
+  }
+}

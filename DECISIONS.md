@@ -177,8 +177,38 @@ a run that looked finished but measured nothing:
 
 `JudgeCallCounter` (a LangChain callback) tells them apart by watching
 `on_llm_error`, which is also where the per-row call and token counts come
-from. On a 429 the score stage stops immediately, prints how many rows are
-left, and leaves them unscored so the same command resumes.
+from.
+
+### Not every 429 is exhaustion
+
+Stopping on *any* 429 was the first implementation, and it made a baseline
+impossible: the very first real run died on
+
+    ... on output tokens per minute (OTPM): Limit 1000, Used 338,
+    Requested 674. Please try again in 720ms.
+
+That is a **720-millisecond** token-bucket wait, not a daily cap. So
+`is_daily_quota_error()` now stops only for limits this run cannot wait out —
+wording that names a daily cap, or a requested wait over
+`DAILY_WAIT_THRESHOLD_S` (300s). Gemini's `retryDelay: 45700s` stops the run;
+Groq's 720ms sleeps for the time the provider asked for and carries on, up to
+`MAX_ROW_ATTEMPTS`. When the stage does stop it prints how many rows are left
+and leaves them unscored, so the same command resumes.
+
+A bug worth remembering from that parser: the regex captured `720ms.` including
+the sentence's full stop, which failed the millisecond branch and fell through
+to the h/m/s branch, reading `720m` as **12 hours** and tripping the daily
+path. The match is now stripped of trailing dots and milliseconds are matched
+with `fullmatch`. `tests/test_eval.py` pins all four wordings.
+
+### max_workers=1
+
+The brief specified `RunConfig(max_workers=2)` to stay inside free-tier limits.
+With the Groq judge that is counterproductive: one row costs ~11k tokens
+against an 8000 TPM / 1000 OTPM bucket, so a single row already exceeds the
+per-minute budget and a second worker only manufactures 429s. Set to 1. The
+baseline is therefore paced by the token bucket — expect well over an hour for
+60 rows — rather than by request count.
 
 `run_report` refuses to write summary.json when any metric's parse-failure rate
 is above 10%, so a judge that mostly failed can never be mistaken for a
@@ -196,3 +226,42 @@ have been judged — previously an out-of-scope row counted as four NaNs.
 * Re-check whether a paid Gemini tier makes the original cross-provider judge
   (Gemini judging Groq) affordable, which would be a cleaner independence story
   than Qwen judging gpt-oss.
+
+## Golden dataset assembly
+
+`data/golden.jsonl` holds all 75 rows, ids `q001`–`q075`, ordered in_scope
+(by chapter, then section) then not_in_syllabus then out_of_scope. The earlier
+per-chapter drafts under `data/processed/` were deleted: that directory is
+gitignored, so a dataset left there would never have been committed.
+
+Every row is `source: "llm"` and `reviewed: false`. Only the user flips
+`reviewed` to true, because the README's "LLM-drafted, human-reviewed" claim
+has to be literally true. `MIN_REVIEWED_ROWS = 60` means the baseline refuses
+to start until that review has happened.
+
+`check_mix()` in `eval/dataset.py` fails the load unless the type counts
+(60/5/10) and the per-chapter in-scope counts (10/8/6/18/14/4) match the brief
+exactly, so the dataset cannot drift without someone noticing. Tests pass
+`validate_mix=False` when they are exercising row-level validation on a
+deliberately small file. Achieved K-levels are K1 20, K2 28, K3 12 — exactly
+the brief's target — with 21 rows marked `multi_chunk`.
+
+Both drafting rules were checked mechanically over all 75 rows: no question
+shares an 8-word run with the syllabus text, and no reference exceeds 60 words.
+
+## Eval dashboard and the fixture run
+
+The dashboard reads only committed artifacts — `config.json`, `summary.json`,
+`scores.csv` — so it works on a fresh clone with no API keys and no
+`answers.jsonl`. Question text for the Worst 10 table is joined from
+`data/golden.jsonl` by id, because `scores.csv` deliberately carries no text.
+
+`runs/fixture/` exists so the dashboard has something to render before any real
+run. Its numbers are invented, its `config.json` sets `"fixture": true`, and
+the dashboard shows a warning banner on any run carrying that flag. It must
+never be read as a measurement.
+
+The chat tab's "Score this answer" button calls the same `make_scorer()` from
+`eval/score.py` rather than re-creating the Ragas setup. With no reference
+answer it can only compute faithfulness and response relevancy, which the
+caption says; the button is hidden when no judge API key is configured.
