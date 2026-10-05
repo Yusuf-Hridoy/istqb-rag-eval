@@ -10,7 +10,7 @@ from tests.conftest import FakeEmbeddings, SpyLLM, ThrowingLLM, fake_page, make_
 
 @pytest.fixture
 def store() -> Chroma:
-    s = Chroma(embedding_function=FakeEmbeddings())
+    s = Chroma(embedding_function=FakeEmbeddings(), collection_metadata={"hnsw:space": "cosine"})
     s.add_documents(
         [
             fake_page(42, "Testing shows the presence of defects, not their absence."),
@@ -39,6 +39,39 @@ def test_status_mapping_not_found(store):
     llm = SpyLLM(responses=[prompts.NOT_FOUND_TEXT])
     result = answer("any question", llm=llm, store=store, settings=make_settings())
     assert result.status == "no_context"
+
+
+def test_status_mapping_normalizes_reply(store):
+    refusal = prompts.REFUSAL_TEXT
+    not_found = prompts.NOT_FOUND_TEXT
+    cases = [
+        (refusal.rstrip("."), "refused"),  # missing period
+        (f'"{refusal}"', "refused"),  # wrapped in quotes
+        (refusal.upper(), "refused"),  # different case
+        (not_found.rstrip("."), "no_context"),
+        (f"'{not_found}'", "no_context"),
+        (not_found.lower(), "no_context"),
+    ]
+    for reply, expected_status in cases:
+        llm = SpyLLM(responses=[reply])
+        result = answer("any question", llm=llm, store=store, settings=make_settings())
+        assert result.status == expected_status, f"reply={reply!r}"
+
+
+def test_empty_store_returns_error():
+    # NOTE: chromadb's in-memory client is a process-wide singleton, so this
+    # collection needs a unique name to actually be empty.
+    empty = Chroma(
+        collection_name="empty-store-test",
+        embedding_function=FakeEmbeddings(),
+        collection_metadata={"hnsw:space": "cosine"},
+    )
+    result = answer(
+        "any question", llm=SpyLLM(responses=["x"]), store=empty, settings=make_settings()
+    )
+    assert result.status == "error"
+    assert "Vector store is empty" in result.error
+    assert "istqb_rag.ingest" in result.error
 
 
 def test_status_mapping_answered(store):

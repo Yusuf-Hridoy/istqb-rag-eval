@@ -26,9 +26,10 @@ Streamlit chat tab. Evaluation (Ragas) arrives in Phase 2.
 
 ## Ingest summary (real PDF)
 
-- Source: `ISTQB_CTFL_Syllabus_v4.0.1.pdf` (78 pages), content pages 14–75
-  (62 pages; front matter + index excluded).
-- **197 chunks**, average length **829 characters** (CHUNK_SIZE=1000,
+- Source: `ISTQB_CTFL_Syllabus_v4.0.1.pdf` (78 pages), content pages 14–63
+  (50 pages; front matter, appendices and index excluded — Appendix A starts
+  on page 64).
+- **167 chunks**, average length **840 characters** (CHUNK_SIZE=1000,
   CHUNK_OVERLAP=150).
 - Collection `ctfl_v4` in `.chroma/`, cosine distance, embeddings
   `BAAI/bge-small-en-v1.5`.
@@ -63,7 +64,7 @@ Streamlit chat tab. Evaluation (Ragas) arrives in Phase 2.
 
 ## Acceptance criteria status
 
-- [x] `uv sync` + ingest builds the store from the real PDF, 197 chunks (>100).
+- [x] `uv sync` + ingest builds the store from the real PDF, 167 chunks (>100).
 - [x] `uv run pytest` passes offline (16 tests); `ruff check` and
       `ruff format --check` pass.
 - [x] `git status` after a full run: no PDF, no `.chroma/`, no `.env` (all

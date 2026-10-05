@@ -6,6 +6,7 @@ RagResult and never raises: errors become status="error" with a message.
 
 import re
 import time
+from functools import lru_cache
 
 from langchain_chroma import Chroma
 from langchain_community.embeddings import FastEmbedEmbeddings
@@ -17,6 +18,8 @@ from istqb_rag.config import Settings, get_settings
 from istqb_rag.models import RagResult, RetrievedChunk
 
 _CITATION_RE = re.compile(r"[\[【]p\.\s*(\d+)[\]】]")
+_QUOTES = "\"'“”‘’«»"
+_EMPTY_STORE_MESSAGE = "Vector store is empty — run: uv run python -m istqb_rag.ingest"
 
 
 def parse_cited_pages(text: str) -> list[int]:
@@ -31,6 +34,16 @@ def parse_cited_pages(text: str) -> list[int]:
     return pages
 
 
+def _normalize(text: str) -> str:
+    """Strip whitespace, surrounding quotes and trailing punctuation, casefold."""
+    return text.strip().strip(_QUOTES).rstrip(".!?").strip().casefold()
+
+
+_REFUSAL_NORMALIZED = _normalize(prompts.REFUSAL_TEXT)
+_NOT_FOUND_NORMALIZED = _normalize(prompts.NOT_FOUND_TEXT)
+
+
+@lru_cache
 def _build_llm(settings: Settings) -> BaseChatModel:
     if not settings.groq_api_key:
         raise ValueError("GROQ_API_KEY is not set — add it to .env (see .env.example).")
@@ -42,6 +55,7 @@ def _build_llm(settings: Settings) -> BaseChatModel:
     )
 
 
+@lru_cache
 def _build_store(settings: Settings) -> Chroma:
     return Chroma(
         persist_directory=str(settings.chroma_dir),
@@ -93,6 +107,9 @@ def answer(
             store = _build_store(settings)
         except Exception as exc:
             return _error_result(question, model, _ms(t0), exc)
+
+    if store._collection.count() == 0:
+        return _error_result(question, model, _ms(t0), RuntimeError(_EMPTY_STORE_MESSAGE))
 
     # 1. Retrieve
     t_retrieve = time.perf_counter()
@@ -147,10 +164,11 @@ def answer(
         )
     generate_ms = _ms(t_generate)
 
-    # 4. Map status from the fixed texts
-    if reply == prompts.REFUSAL_TEXT:
+    # 4. Map status from the fixed texts (normalized comparison)
+    normalized = _normalize(reply)
+    if normalized == _REFUSAL_NORMALIZED:
         status = "refused"
-    elif reply == prompts.NOT_FOUND_TEXT:
+    elif normalized == _NOT_FOUND_NORMALIZED:
         status = "no_context"
     else:
         status = "answered"

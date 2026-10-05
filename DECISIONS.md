@@ -17,18 +17,19 @@ was created at `~/Ragas-Test/istqb-rag-eval` (inside the working directory that
 held the PDF and `.env`), initialised with `git init -b main`, and pushed to a
 new GitHub repo at the end of the phase.
 
-## Content page range: 14–75
+## Content page range: 14–63
 
 Inspecting `ISTQB_CTFL_Syllabus_v4.0.1.pdf` (78 pages, viewer page numbers):
 
 - Pages 1–13 are cover, copyright, table of contents and the introduction
   (chapter 0). Page 14 starts "1. Fundamentals of Testing".
+- **Page 64 starts "Appendix A – Learning Objectives/Cognitive Level of
+  Knowledge"** (Phase 1.1 patch: the range used to run to 75, but the appendix
+  LO tables added retrieval noise without answer content).
 - Pages 76–78 are the index.
-- The appendices (A–C) on pages ~64–75 are kept: they are part of the syllabus
-  and the brief only excludes front matter, TOC and index.
 
-So `FIRST_CONTENT_PAGE=14`, `LAST_CONTENT_PAGE=75` (defaults in `config.py`,
-overridable via `.env`).
+So `FIRST_CONTENT_PAGE=14`, `LAST_CONTENT_PAGE=63` (defaults in `config.py`,
+overridable via `.env`). Re-ingested at 1.1: 50 content pages, 167 chunks.
 
 ## Defaults in config.py
 

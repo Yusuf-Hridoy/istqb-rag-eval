@@ -48,9 +48,10 @@ class Settings:
 def get_settings() -> Settings:
     """Build Settings from the environment (with .env loaded).
 
-    FIRST_CONTENT_PAGE / LAST_CONTENT_PAGE defaults (14–75) match the printed
-    page numbers of ISTQB_CTFL_Syllabus_v4.0.1.pdf: page 14 starts Chapter 1
-    and pages 76–78 are the index. Override in .env for a different PDF.
+    FIRST_CONTENT_PAGE / LAST_CONTENT_PAGE defaults (14–63) match the printed
+    page numbers of ISTQB_CTFL_Syllabus_v4.0.1.pdf: page 14 starts Chapter 1,
+    page 63 is the last content page before Appendix A (which starts on page
+    64). Override in .env for a different PDF.
     """
     return Settings(
         groq_api_key=os.getenv("GROQ_API_KEY", ""),
@@ -62,7 +63,7 @@ def get_settings() -> Settings:
         chunk_overlap=_int("CHUNK_OVERLAP", 150),
         syllabus_path=_path("SYLLABUS_PATH", "data/raw/ctfl_syllabus_v4.pdf"),
         first_content_page=_int("FIRST_CONTENT_PAGE", 14),
-        last_content_page=_int("LAST_CONTENT_PAGE", 75),
+        last_content_page=_int("LAST_CONTENT_PAGE", 63),
         chroma_dir=_path("CHROMA_DIR", ".chroma"),
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
     )

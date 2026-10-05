@@ -1,6 +1,6 @@
 # Smoke test — Phase 1
 
-Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
+Run: 2026-10-05 07:50 UTC via `uv run python -m istqb_rag.cli <question> --json`
 
 | # | Question | Expected | Got | OK |
 |---|----------|----------|-----|----|
@@ -30,30 +30,30 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
       "score": 0.8249
     },
     {
-      "chunk_id": "p66-1",
-      "page": 66,
-      "text": "Chapter/ \nsection/ \nsubsection \nLearning objective \nK-\nlevel \nBUSINESS OUTCOMES \nFL-BO1 \nFL-BO2 \nFL-BO3 \nFL-BO4 \nFL-BO5 \nFL-BO6 \nFL-BO7 \nFL-BO8 \nFL-BO9 \nFL-BO10 \nFL-BO11 \nFL-BO12 \nFL-BO13 \nFL-BO14 \nChapter 1 \nFundamentals of Testing \n1.1 \nWhat is Testing? \n1.1.1 \nIdentify typical test objectives  \nK1 \nX \n1.1.2 \nDifferentiate testing from debugging \nK2 \nX \n1.2  \nWhy is Testing Necessary?  \n1.2.1 \nExemplify why testing is necessary \nK2 \nX \n1.2.2 \nRecall the relation between testing and quality assurance \nK1 \nX \n1.2.3 \nDistinguish between root cause, error, defect, and failure \nK2 \nX \n1.3 \nTesting Principles \n1.3.1 \nExplain the seven testing principles \nK2 \nX \n1.4 \nTest Activities, Testware and Test Roles \n1.4.1 \nExplain the different test activities and related tasks \nK2 \nX \n1.4.2 \nExplain the impact of context on the test process \nK2 \nX \nX \n1.4.3 \nDifferentiate the testware that support the test activities \nK2 \nX \n1.4.4 \nExplain the value of maintaining traceability \nK2 \nX \nX \n1.4.5",
-      "score": 0.7867
-    },
-    {
       "chunk_id": "p14-1",
       "page": 14,
       "text": "1. Fundamentals of Testing \u2013 180 minutes \nKeywords \ncoverage, debugging, defect, error, failure, quality, quality assurance, root cause, test analysis, test basis, \ntest case, test completion, test condition, test control, test data, test design, test execution, test \nimplementation, test monitoring, test object, test objective, test planning, test procedure, test process, test \nresult, testing, testware, traceability, validation, verification \nLearning Objectives for Chapter 1: \n1.1  What is Testing? \nFL-1.1.1 \n(K1) Identify typical test objectives  \nFL-1.1.2 \n(K2) Differentiate testing from debugging \n1.2  Why is Testing Necessary? \nFL-1.2.1 \n(K2) Exemplify why testing is necessary \nFL-1.2.2 \n(K1) Recall the relation between testing and quality assurance \nFL-1.2.3 \n(K2) Distinguish between root cause, error, defect, and failure \n1.3  Testing Principles \nFL-1.3.1 \n(K2) Explain the seven testing principles \n1.4  Test Activities, Testware and Test Roles \nFL-1.4.1",
       "score": 0.7707
     },
     {
-      "chunk_id": "p65-2",
-      "page": 65,
-      "text": "6 \nBO7 \nUnderstand test management principles  \n6 \nBO8 \nWrite and communicate clear and understandable defect reports  \n1 \nBO9 \nUnderstand the factors that influence the priorities and efforts related to \ntesting \n7 \nBO10 \nWork as part of a cross-functional team \n8 \nBO11 \nKnow risks and benefits related to test automation. \n1 \nBO12 \nIdentify essential skills required for testing  \n5 \nBO13 \nUnderstand the impact of risk on testing  \n4 \nBO14 \nEffectively report on test progress and quality  \n4",
-      "score": 0.7638
+      "chunk_id": "p14-2",
+      "page": 14,
+      "text": "1.3  Testing Principles \nFL-1.3.1 \n(K2) Explain the seven testing principles \n1.4  Test Activities, Testware and Test Roles \nFL-1.4.1 \n(K2) Explain the different test activities and related tasks \nFL-1.4.2 \n(K2) Explain the impact of context on the test process \nFL-1.4.3 \n(K2) Differentiate the testware that supports the test activities \nFL-1.4.4 \n(K2) Explain the value of maintaining traceability \nFL-1.4.5 \n(K2) Compare the different roles in testing \n1.5  Essential Skills and Good Practices in Testing \nFL-1.5.1 \n(K2) Give examples of the generic skills required for testing \nFL-1.5.2 \n(K1) Recall the advantages of the whole team approach \nFL-1.5.3 \n(K2) Distinguish the benefits and drawbacks of independence of testing",
+      "score": 0.7437
+    },
+    {
+      "chunk_id": "p18-3",
+      "page": 18,
+      "text": "7. Absence-of-defects fallacy. It is a fallacy (i.e., a misconception) to expect that software verification \nwill ensure the success of a system. Thoroughly testing all the specified requirements and fixing all the \ndefects found could still produce a system that does not fulfill the users\u2019 needs and expectations, that \ndoes not help in achieving the customer\u2019s business goals, and that is inferior compared to other \ncompeting systems. In addition to verification, validation should also be carried out (Boehm 1981). \n1.4. Test Activities, Testware and Test Roles \nTesting is context dependent, but, at a high level, there are common sets of test activities without which \ntesting is less likely to achieve test objectives. These sets of test activities form a test process. The test \nprocess can be tailored to a given situation based on various factors. Which test activities are included in",
+      "score": 0.7024
     }
   ],
   "cited_pages": [],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 25,
-    "generate": 864,
-    "total": 1368
+    "retrieve": 4,
+    "generate": 837,
+    "total": 1172
   },
   "error": null
 }
@@ -65,7 +65,7 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
 {
   "question": "What is the difference between a defect and a failure?",
   "status": "answered",
-  "answer": "A **defect** is a flaw in a work product (e.g., code) that exists in the system. When that defect is executed, it may cause the system to behave incorrectly. A **failure** is the observable incorrect behavior that occurs when a defect (or other cause such as an environmental condition) is triggered. Thus, a defect is the underlying cause; a failure is the manifested symptom of that cause.\u202f[p. 17]",
+  "answer": "A **defect** is a flaw in a work product (e.g., code) that exists in the system. When that defect is executed it may cause the system to behave incorrectly. A **failure** is the observable incorrect behavior that occurs when a defect (or other cause such as an environmental condition) is triggered. Thus, a defect is the underlying cause; a failure is the manifested symptom of that cause.\u202f[p. 17]",
   "contexts": [
     {
       "chunk_id": "p17-3",
@@ -97,9 +97,9 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   ],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 26,
-    "generate": 1151,
-    "total": 1472
+    "retrieve": 5,
+    "generate": 1137,
+    "total": 1415
   },
   "error": null
 }
@@ -111,19 +111,13 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
 {
   "question": "Explain boundary value analysis with an example.",
   "status": "answered",
-  "answer": "Boundary Value Analysis (BVA) is a test technique that focuses on the limits of ordered equivalence partitions. Test cases are created for the minimum and maximum values of each partition (the \u201cboundary values\u201d) because developers are most likely to make errors at these points\u202f[p.\u202f40].  \n\nFor a simple decision such as `if (x\u202f\u2264\u202f10) \u2026`, BVA would generate test data around the boundary\u202f10.  \n* **2\u2011value BVA** uses the boundary and the next value:\u202fx\u202f=\u202f10 and\u202fx\u202f=\u202f11. These two cases cover the boundary but would miss a defect where the code is written as `if (x\u202f=\u202f10) \u2026`\u202f[p.\u202f40].  \n* **3\u2011value BVA** adds the value just inside the boundary:\u202fx\u202f=\u202f9,\u202fx\u202f=\u202f10,\u202fx\u202f=\u202f11. The extra value (9) can reveal the \u201c=\u202finstead of \u2264\u201d error that 2\u2011value BVA would not detect\u202f[p.\u202f40].\n\nCoverage is measured as the number of exercised boundary values (and their neighbors) divided by the total identified, expressed as a percentage\u202f[p.\u202f40].",
+  "answer": "Boundary Value Analysis (BVA) is a test\u2011design technique that focuses on the limits of ordered equivalence partitions because developers tend to make mistakes at those points\u202f[p.\u202f40].  \nFor each partition the minimum and maximum values are the *boundary values*. In **2\u2011value BVA** the test set contains the boundary value itself and the nearest value in the adjacent partition; in **3\u2011value BVA** it also includes the value just inside the boundary\u202f[p.\u202f40].  \n\n**Example** \u2013 consider the decision `if (x \u2264 10) \u2026`.  \n* 2\u2011value BVA would generate the test data\u202fx\u202f=\u202f10 (boundary) and\u202fx\u202f=\u202f11 (just above).  \n* 3\u2011value BVA adds the value just below the boundary,\u202fx\u202f=\u202f9, so the test set is\u202f9,\u202f10,\u202f11\u202f[p.\u202f40].  \n\nIf the implementation mistakenly uses `if (x = 10) \u2026`, the 2\u2011value tests (10,\u202f11) would not reveal the defect, but the 3\u2011value test (9) would, showing the added fault\u2011detecting power of 3\u2011value BVA\u202f[p.\u202f40].",
   "contexts": [
     {
       "chunk_id": "p40-3",
       "page": 40,
       "text": "Boundary Value Analysis \nBoundary Value Analysis (BVA) is a test technique based on exercising the boundaries of equivalence \npartitions. Therefore, BVA can only be used for ordered partitions. The minimum and maximum values of \na partition are its boundary values. In the case of BVA, if two elements belong to the same partition, all \nelements between them must also belong to that partition. \nBVA focuses on the boundary values of the partitions because developers are more likely to make errors \nwith these boundary values. Typical defects found by BVA are located where implemented boundaries \nare misplaced to positions above or below their intended positions or are omitted altogether.  \nThis syllabus covers two versions of the BVA: 2-value and 3-value BVA. They differ in terms of coverage \nitems per boundary that need to be exercised to achieve 100% coverage. \nIn 2-value BVA (Craig 2002, Myers 2011), for each boundary value there are two coverage items: this",
       "score": 0.7339
-    },
-    {
-      "chunk_id": "p64-3",
-      "page": 64,
-      "text": "\u201cPrepare a defect report.\u201d \n\u201cUse boundary value analysis to derive test cases.\u201d \nReferences for the cognitive levels of learning objectives: \nAnderson, L. W. and Krathwohl, D. R. (eds) (2001) A Taxonomy for Learning, Teaching, and Assessing: \nA Revision of Bloom's Taxonomy of Educational Objectives, Allyn & Bacon",
-      "score": 0.7329
     },
     {
       "chunk_id": "p40-5",
@@ -136,6 +130,12 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
       "page": 40,
       "text": "technique, test cases must exercise all identified partitions (including invalid partitions) by covering each \npartition at least once. Coverage is measured as the number of partitions exercised by at least one test \ncase, divided by the total number of identified partitions, and is expressed as a percentage. \nMany test items include multiple sets of partitions (e.g., test items with more than one input parameter), \nwhich means that a test case will cover partitions from different sets of partitions. The simplest coverage \ncriterion in the case of multiple sets of partitions is called Each Choice coverage (Ammann 2016). Each \nChoice coverage requires test cases to exercise each partition from each set of partitions at least once. \nEach Choice coverage does not take into account combinations of partitions.  \nBoundary Value Analysis \nBoundary Value Analysis (BVA) is a test technique based on exercising the boundaries of equivalence",
       "score": 0.6929
+    },
+    {
+      "chunk_id": "p40-4",
+      "page": 40,
+      "text": "In 2-value BVA (Craig 2002, Myers 2011), for each boundary value there are two coverage items: this \nboundary value and its closest neighbor belonging to the adjacent partition. To achieve 100% coverage \nwith 2-value BVA, test cases must exercise all coverage items, i.e., all identified boundary values. \nCoverage is measured as the number of boundary values that were exercised, divided by the total \nnumber of identified boundary values, and is expressed as a percentage. \nIn 3-value BVA (Koomen 2006, O\u2019Regan 2019), for each boundary value there are three coverage items: \nthis boundary value and both its neighbors. Therefore, in 3-value BVA some of the coverage items may \nnot be boundary values. To achieve 100% coverage with 3-value BVA, test cases must exercise all \ncoverage items, i.e., identified boundary values and their neighbors. Coverage is measured as the \nnumber of boundary values and their neighbors exercised, divided by the total number of identified",
+      "score": 0.6835
     }
   ],
   "cited_pages": [
@@ -143,9 +143,9 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   ],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 23,
-    "generate": 1364,
-    "total": 1671
+    "retrieve": 5,
+    "generate": 1318,
+    "total": 1602
   },
   "error": null
 }
@@ -157,7 +157,7 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
 {
   "question": "What does risk-based testing involve?",
   "status": "answered",
-  "answer": "Risk\u2011based testing is the test approach where test activities are **selected, prioritized, and managed** based on the outcomes of risk analysis and risk control activities. It uses the identified product risks to guide which tests to perform, how extensively to test, and when to focus testing effort, aiming to address the most critical risks first.\u202f[p. 51]",
+  "answer": "Risk\u2011based testing is the test approach where test activities are **selected, prioritized, and managed based on the results of risk analysis and risk control**. This means that the identified risks (through risk identification and assessment) and the actions taken to mitigate or monitor those risks drive which tests are performed, when they are performed, and how they are controlled\u202f[p. 51].",
   "contexts": [
     {
       "chunk_id": "p51-4",
@@ -172,16 +172,16 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
       "score": 0.7872
     },
     {
-      "chunk_id": "p71-1",
-      "page": 71,
-      "text": "Chapter/ \nsection/ \nsubsection \nLearning objective \nK-\nlevel \nBUSINESS OUTCOMES \nFL-BO1 \nFL-BO2 \nFL-BO3 \nFL-BO4 \nFL-BO5 \nFL-BO6 \nFL-BO7 \nFL-BO8 \nFL-BO9 \nFL-BO10 \nFL-BO11 \nFL-BO12 \nFL-BO13 \nFL-BO14 \n5.2.3 \nExplain how product risk analysis may influence thoroughness and test scope \nK2 \nX \nX \nX \n5.2.4 \nExplain what measures can be taken in response to analyzed product risks \nK2 \nX \nX \nX \n5.3 \nTest Monitoring, Test Control and Test Completion \n5.3.1 \nRecall metrics used for testing \nK1 \nX \nX \n5.3.2 \nSummarize the purposes, content, and audiences for test reports \nK2 \nX \nX \nX \n5.3.3 \nExemplify how to communicate the status of testing \nK2 \nX \nX \n5.4 \nConfiguration Management \n5.4.1 \nSummarize how configuration management supports testing \nK2 \nX \nX \n5.5 \nDefect Management \n5.5.1 \nPrepare a defect report \nK3 \nX \nX \nChapter 6 \nTest Tools \n6.1 \nTool Support for Testing \n6.1.1 \nExplain how different types of test tools support testing \nK2 \nX \n6.2 \nBenefits and Risks of Test Automation \n6.2.1",
-      "score": 0.7564
-    },
-    {
       "chunk_id": "p53-2",
       "page": 53,
       "text": "Determine the test techniques to be employed and the coverage to be achieved \nEstimate the test effort required for each task \nPrioritize testing in an attempt to find the critical defects as early as possible \nDetermine whether any activities in addition to testing could be employed to reduce risk \nProduct Risk Control \nProduct risk control comprises all measures that are taken in response to identified and assessed product \nrisks. Product risk control consists of risk mitigation and risk monitoring. Risk mitigation involves \nimplementing the actions proposed in risk assessment to reduce the risk level. The aim of risk monitoring \nis to ensure that the mitigation actions are effective, to obtain further information to improve risk \nassessment, and to identify emerging risks. \nWith respect to product risk control, once a risk has been analyzed, several response options to risk are",
       "score": 0.7469
+    },
+    {
+      "chunk_id": "p20-2",
+      "page": 20,
+      "text": "Test planning work products include: test plan, test schedule, risk register, entry criteria and \nexit criteria (see section 5.1). Risk register is a list of risks together with risk likelihood, risk impact \nand information about risk mitigation (see section 5.2). Test schedule, risk register, entry criteria \nand exit criteria are often a part of the test plan. \nTest monitoring and test control work products include: test progress reports (see section \n5.3.2), documentation of control directives (see section 5.3) and information about risks (see \nsection 5.2).  \nTest analysis work products include: (prioritized) test conditions (e.g., acceptance criteria, see \nsection 4.5.2), and defect reports regarding defects in the test basis (if not fixed directly). \nTest design work products include: (prioritized) test cases, test charters, coverage items, test \ndata requirements and test environment requirements.",
+      "score": 0.7448
     }
   ],
   "cited_pages": [
@@ -189,9 +189,9 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   ],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 19,
-    "generate": 1006,
-    "total": 1298
+    "retrieve": 5,
+    "generate": 1180,
+    "total": 1468
   },
   "error": null
 }
@@ -203,7 +203,7 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
 {
   "question": "What are the benefits of static testing?",
   "status": "answered",
-  "answer": "Static testing offers several benefits:\n\n* It evaluates the quality of work products and builds confidence in them, especially by verifying documented requirements so stakeholders can be sure they reflect actual needs\u3010p. 33\u3011.  \n* Because it can be performed early in the SDLC, it creates a shared understanding among stakeholders and improves communication, which is why a wide variety of stakeholders should be involved\u3010p. 33\u3011.  \n* Reviews, though sometimes costly to implement, usually lower overall project costs since defects are fixed earlier, reducing later re\u2011work\u3010p. 34\u3011.  \n* Static analysis can detect certain code defects more efficiently than dynamic testing, leading to fewer code defects and lower development effort\u3010p. 34\u3011.  \n* It can be applied to non\u2011executable work products and to quality characteristics that do not depend on executing code (e.g., maintainability)\u3010p. 34\u3011.",
+  "answer": "- Evaluates quality and builds confidence in work products\u202f[p.\u202f33]  \n- Verifies that documented requirements truly reflect stakeholder needs\u202f[p.\u202f33]  \n- Can be performed early in the SDLC, creating a shared understanding among stakeholders\u202f[p.\u202f33]  \n- Improves communication between stakeholders\u202f[p.\u202f33]  \n- Involves a wide variety of stakeholders, enhancing collaboration\u202f[p.\u202f33]  \n- Detects defects directly (e.g., requirements ambiguities, design flaws) without executing code\u202f[p.\u202f34]  \n- Can find defects on rarely\u2011executed or hard\u2011to\u2011reach paths more easily than dynamic testing\u202f[p.\u202f34]  \n- Allows measurement of quality characteristics not dependent on execution (e.g., maintainability)\u202f[p.\u202f34]  \n- Reduces overall project costs because fewer defects need fixing later\u202f[p.\u202f34]",
   "contexts": [
     {
       "chunk_id": "p34-2",
@@ -236,9 +236,9 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   ],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 21,
-    "generate": 1453,
-    "total": 1765
+    "retrieve": 4,
+    "generate": 1722,
+    "total": 2013
   },
   "error": null
 }
@@ -252,12 +252,6 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   "status": "refused",
   "answer": "I only answer questions about the ISTQB Certified Tester Foundation Level syllabus.",
   "contexts": [
-    {
-      "chunk_id": "p74-1",
-      "page": 74,
-      "text": "in 6.2 \u201cdefect rate\u201d replaced with \u201cfailure rate\u201d and \u201cthat are too complicated for humans to derive\u201d \nreplaced by \u201cthat are too complicated for humans to determine\" \nMoreover, several typos were fixed and some terms were unified across the whole syllabus (e.g., conduct \n-> perform). \nRELEASE NOTES FOR THE 4.0 VERSION \nISTQB\u00ae Foundation Syllabus v4.0 is a major update based on the Foundation Level syllabus (v3.1.1) and \nthe Agile Tester 2014 syllabus. For this reason, there are no detailed release notes per chapter and section. \nHowever, a summary of principal changes is provided below. Additionally, in a separate Release Notes \ndocument, ISTQB\u00ae provides traceability between the learning objectives (LO) in the version 3.1.1 of the \nFoundation Level Syllabus, 2014 version of the Agile Tester Syllabus, and the learning objectives in the \nnew Foundation Level v4.0 Syllabus, showing which LOs have been added, updated, or removed.",
-      "score": 0.5531
-    },
     {
       "chunk_id": "p60-2",
       "page": 60,
@@ -275,14 +269,20 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
       "page": 62,
       "text": "The Netherlands \nWatson, A.H., Wallace, D.R. and McCabe, T.J. (1996) Structured Testing: A Testing Methodology Using \nthe Cyclomatic Complexity Metric, U.S. Dept. of Commerce, Technology Administration, NIST \nWestfall, L. (2009) The Certified Software Quality Engineer Handbook, ASQ Quality Press \nWhittaker, J. (2002) How to Break Software: A Practical Guide to Testing, Pearson \nWhittaker, J. (2009) Exploratory Software Testing: Tips, Tricks, Tours, and Techniques to Guide Test \nDesign, Addison Wesley \nWhittaker, J. and Thompson, H. (2003) How to Break Software Security, Addison Wesley \nWiegers, K. (2001) Peer Reviews in Software: A Practical Guide, Addison-Wesley Professional \nArticles and Web Pages \nBrykczynski, B. (1999) \u201cA survey of software inspection checklists,\u201d ACM SIGSOFT Software Engineering \nNotes, 24(1), pp. 82-89",
       "score": 0.5347
+    },
+    {
+      "chunk_id": "p61-3",
+      "page": 61,
+      "text": "Chelimsky, D. et al. (2010) The Rspec Book: Behaviour Driven Development with Rspec, Cucumber, and \nFriends, The Pragmatic Bookshelf: Raleigh, NC \nCohn, M. (2009) Succeeding with Agile: Software Development Using Scrum, Addison-Wesley \nCopeland, L. (2004) A Practitioner\u2019s Guide to Software Test Design, Artech House: Norwood MA \nCraig, R. and Jaskiel, S. (2002) Systematic Software Testing, Artech House: Norwood MA \nCrispin, L. and Gregory, J. (2008) Agile Testing: A Practical Guide for Testers and Agile Teams, Pearson \nEducation: Boston MA \nForg\u00e1cs, I., and Kov\u00e1cs, A. (2019) Practical Test Design: Selection of traditional and automated test \ndesign techniques, BCS, The Chartered Institute for IT",
+      "score": 0.5293
     }
   ],
   "cited_pages": [],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 82,
-    "generate": 841,
-    "total": 1198
+    "retrieve": 7,
+    "generate": 697,
+    "total": 985
   },
   "error": null
 }
@@ -297,12 +297,6 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   "answer": "I only answer questions about the ISTQB Certified Tester Foundation Level syllabus.",
   "contexts": [
     {
-      "chunk_id": "p64-2",
-      "page": 64,
-      "text": "Action verbs: classify, compare, contrast, differentiate, distinguish, exemplify, explain, give examples, \ninterpret, summarize. \nExamples: \n\u201cClassify the different options for writing acceptance criteria.\u201d \n\u201cCompare the different roles in testing\u201d (look for similarities, differences or both). \n\u201cDistinguish between project risks and product risks\u201d (allows concepts to be differentiated). \n\u201cExemplify the purpose and content of a test plan.\u201d \n\u201cExplain the impact of context on the test process.\u201d \n\u201cSummarize the activities of the review process.\u201d \nLevel 3: Apply (K3) \u2013 the candidate can carry out a procedure when confronted with a familiar task, or \nselect the correct procedure and apply it to a given context. \nAction verbs: apply, implement, prepare, use. \nExamples: \n\u201cApply test case prioritization\u201d (should refer to a procedure, technique, process, algorithm etc.). \n\u201cPrepare a defect report.\u201d \n\u201cUse boundary value analysis to derive test cases.\u201d",
-      "score": 0.4175
-    },
-    {
       "chunk_id": "p45-3",
       "page": 45,
       "text": "Card \u2013 the medium describing a user story (e.g., an index card, an entry in an electronic board)  \nConversation \u2013 explains how the software will be used (can be documented or verbal)  \nConfirmation \u2013 the acceptance criteria (see section 4.5.2) \nThe most common format for a user story is \u201cAs a [role], I want [goal to be accomplished], so that I can \n[resulting business value for the role]\u201d, followed by the acceptance criteria. \nCollaborative authorship of the user story can use techniques such as brainstorming and mind mapping. \nThe collaboration allows the team to obtain a shared vision of what should be delivered, by taking into \naccount three perspectives: business, development and testing. \nGood user stories should be: Independent, Negotiable, Valuable, Estimable, Small and Testable \n(INVEST). If a stakeholder does not know how to test a user story, this may indicate that the user story is",
@@ -315,18 +309,24 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
       "score": 0.4054
     },
     {
-      "chunk_id": "p73-3",
-      "page": 73,
-      "text": "In 4.2.4 \u201cstate transition diagram\u201d replaced with \u201cstate diagram\u201d, as this is the common name of this \nmodel in computer science, and also to be consistent with the Model-based testing syllabus \nIn 5.1.1 \u201cconstraints\u201d in the first bullet point removed, constraints are the focus of the second bullet \npoint \nIn 5.1.3 \u201ccompletion criteria\u201d is used in the context of binary \u201cyes/no\u201d criteria, not as a synonym of \n\u201cexit criteria\u201d, so the appropriate term was changed \nin 5.1.6 the relation between test pyramid layers and test isolation levels is corrected (the higher \nthe layer, the lower is the test isolation). As well we replaced \u201ca reasonable coverage\u201d with \u201ca \nreasonable level of coverage\u201d \nIn 5.5 \u201canomalies\u201d exchanged with \u201cdefects or anomalies\u201d",
-      "score": 0.4044
+      "chunk_id": "p22-4",
+      "page": 22,
+      "text": "Independence of Testing \nA certain degree of independence makes the tester more effective at finding defects due to differences \nbetween the author\u2019s and the tester\u2019s cognitive biases (cf. Salman 1995). Independence is not, however, \na replacement for familiarity, e.g., developers can efficiently find many defects in their own code. \nWork products can be tested by their author (no independence), by the author's peers from the same \nteam (some independence), by testers from outside the author's team but within the organization (high \nindependence), or by testers from outside the organization (very high independence). For most projects, it \nis usually best to carry out testing with multiple levels of independence (e.g., developers performing \ncomponent testing and component integration testing, test team performing system and system \nintegration testing, and business representatives performing acceptance testing).",
+      "score": 0.3986
+    },
+    {
+      "chunk_id": "p46-3",
+      "page": 46,
+      "text": "design the test techniques described in sections 4.2, 4.3 and 4.4 may be applied. \nTypically, the first test cases are positive, confirming the correct behavior without exceptions or error \nconditions, and comprising the sequence of activities executed if everything goes as expected. After the \npositive test cases are done, the team should perform negative testing. Finally, the team should cover \nnon-functional quality characteristics (e.g., performance efficiency, usability). Test cases should be \nexpressed in a way that is understandable for the stakeholders. Typically, test cases contain sentences in \nnatural language involving the necessary preconditions (if any), the inputs, and the postconditions.  \nThe test cases must cover all the characteristics of the user story and should not go beyond the story. \nHowever, the acceptance criteria may detail some of the issues described in the user story. In addition,",
+      "score": 0.3979
     }
   ],
   "cited_pages": [],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 21,
-    "generate": 1890,
-    "total": 2184
+    "retrieve": 5,
+    "generate": 665,
+    "total": 952
   },
   "error": null
 }
@@ -341,36 +341,36 @@ Run: 2026-10-05 07:40 UTC via `uv run python -m istqb_rag.cli <question> --json`
   "answer": "I couldn't find this in the ISTQB CTFL syllabus.",
   "contexts": [
     {
-      "chunk_id": "p74-1",
-      "page": 74,
-      "text": "in 6.2 \u201cdefect rate\u201d replaced with \u201cfailure rate\u201d and \u201cthat are too complicated for humans to derive\u201d \nreplaced by \u201cthat are too complicated for humans to determine\" \nMoreover, several typos were fixed and some terms were unified across the whole syllabus (e.g., conduct \n-> perform). \nRELEASE NOTES FOR THE 4.0 VERSION \nISTQB\u00ae Foundation Syllabus v4.0 is a major update based on the Foundation Level syllabus (v3.1.1) and \nthe Agile Tester 2014 syllabus. For this reason, there are no detailed release notes per chapter and section. \nHowever, a summary of principal changes is provided below. Additionally, in a separate Release Notes \ndocument, ISTQB\u00ae provides traceability between the learning objectives (LO) in the version 3.1.1 of the \nFoundation Level Syllabus, 2014 version of the Agile Tester Syllabus, and the learning objectives in the \nnew Foundation Level v4.0 Syllabus, showing which LOs have been added, updated, or removed.",
-      "score": 0.6313
+      "chunk_id": "p40-4",
+      "page": 40,
+      "text": "In 2-value BVA (Craig 2002, Myers 2011), for each boundary value there are two coverage items: this \nboundary value and its closest neighbor belonging to the adjacent partition. To achieve 100% coverage \nwith 2-value BVA, test cases must exercise all coverage items, i.e., all identified boundary values. \nCoverage is measured as the number of boundary values that were exercised, divided by the total \nnumber of identified boundary values, and is expressed as a percentage. \nIn 3-value BVA (Koomen 2006, O\u2019Regan 2019), for each boundary value there are three coverage items: \nthis boundary value and both its neighbors. Therefore, in 3-value BVA some of the coverage items may \nnot be boundary values. To achieve 100% coverage with 3-value BVA, test cases must exercise all \ncoverage items, i.e., identified boundary values and their neighbors. Coverage is measured as the \nnumber of boundary values and their neighbors exercised, divided by the total number of identified",
+      "score": 0.5569
     },
     {
-      "chunk_id": "p72-1",
-      "page": 72,
-      "text": "10. Appendix C \u2013 Release Notes  \nISTQB\u00ae Foundation Syllabus v4.0.1 is an errata for Foundation Level Syllabus v4.0. This errata contains \nthe following changes. \nChanges in Learning Objectives wording, to align it with the glossary terms \nFL-1.4.1: Summarize the different test activities and tasks -> Explain the different test activities and \nrelated tasks \nFL-2.1.5: Explain the shift-left approach -> Explain shift left \nFL-3.1.1: Recognize types of products that can be examined by the different static test techniques \n-> Recognize types of work products that can be examined by static testing \nFL-3.1.3 Compare and contrast static and dynamic testing -> Compare and contrast static testing \nand dynamic testing \nFL-4.1.1: Distinguish black-box, white-box and experience-based test techniques -> Distinguish \nblack-box test techniques, white-box test techniques and experience-based test techniques",
-      "score": 0.6199
+      "chunk_id": "p50-2",
+      "page": 50,
+      "text": "final estimate (E) is their weighted arithmetic mean. In the most popular version of this technique, the \nestimate is calculated as E = (a + 4*m + b) / 6. The advantage of this technique is that it allows the \nexperts to calculate the measurement error: SD = (b \u2013 a) / 6. For example, if the estimates (in person-\nhours) are: a=6, m=9 and b=18, then the final estimation is 10\u00b12 person-hours (i.e., between 8 and 12 \nperson-hours), because E = (6 + 4*9 + 18) / 6 = 10 and SD = (18 \u2013 6) / 6 = 2. \nSee (Kan 2003, Koomen 2006, Westfall 2009) for these and many other test estimation techniques. \nTest Case Prioritization \nOnce the test cases and test procedures are specified and assembled into test suites, these test suites \ncan be arranged in a test execution schedule that defines the order in which they are to be run. When \nprioritizing test cases, different factors can be taken into account. The most commonly used test case \nprioritization strategies are as follows:",
+      "score": 0.5518
     },
     {
-      "chunk_id": "p74-2",
-      "page": 74,
-      "text": "new Foundation Level v4.0 Syllabus, showing which LOs have been added, updated, or removed. \nAt the time the syllabus was written (2022-2023) more than one million people in more than 100 countries \nhave taken the ISTQB\u00ae Foundation Level exam, and more than 800,000 are certified testers worldwide. \nWith the expectation that all of them have read the Foundation Syllabus to be able to pass the exam, this \nmakes the Foundation Syllabus likely to be the most read software testing document ever! This major \nupdate is made in respect of this heritage and to improve the views of hundreds of thousands more people \non the level of quality that ISTQB\u00ae delivers to the global testing community. \nIn this version all LOs have been edited to make them atomic, and to create one-to-one traceability between \nLOs and syllabus sections, thus not having content without also having a LO. The goal is to make this",
-      "score": 0.6184
+      "chunk_id": "p40-2",
+      "page": 40,
+      "text": "technique, test cases must exercise all identified partitions (including invalid partitions) by covering each \npartition at least once. Coverage is measured as the number of partitions exercised by at least one test \ncase, divided by the total number of identified partitions, and is expressed as a percentage. \nMany test items include multiple sets of partitions (e.g., test items with more than one input parameter), \nwhich means that a test case will cover partitions from different sets of partitions. The simplest coverage \ncriterion in the case of multiple sets of partitions is called Each Choice coverage (Ammann 2016). Each \nChoice coverage requires test cases to exercise each partition from each set of partitions at least once. \nEach Choice coverage does not take into account combinations of partitions.  \nBoundary Value Analysis \nBoundary Value Analysis (BVA) is a test technique based on exercising the boundaries of equivalence",
+      "score": 0.5456
     },
     {
-      "chunk_id": "p70-1",
-      "page": 70,
-      "text": "Chapter/ \nsection/ \nsubsection \nLearning objective \nK-\nlevel \nBUSINESS OUTCOMES \nFL-BO1 \nFL-BO2 \nFL-BO3 \nFL-BO4 \nFL-BO5 \nFL-BO6 \nFL-BO7 \nFL-BO8 \nFL-BO9 \nFL-BO10 \nFL-BO11 \nFL-BO12 \nFL-BO13 \nFL-BO14 \n4.5.1 \nExplain how to write user stories in collaboration with developers and business \nrepresentatives \nK2 \nX \nX \n4.5.2 \nClassify the different options for writing acceptance criteria  \nK2 \nX \n4.5.3 \nUse acceptance test-driven development (ATDD) to derive test cases \nK3 \nX \nChapter 5 \nManaging the Test Activities \n5.1 \nTest Planning \n5.1.1 \nExemplify the purpose and content of a test plan \nK2 \nX \nX \n5.1.2 \nRecognize how a tester adds value to iteration and release planning \nK1 \nX \nX \nX \n5.1.3 \nCompare and contrast entry criteria and exit criteria \nK2 \nX \nX \nX \n5.1.4 \nUse estimation techniques to calculate the required test effort \nK3 \nX \nX \n5.1.5 \nApply test case prioritization \nK3 \nX \nX \n5.1.6 \nRecall the concepts of the test pyramid  \nK1 \nX \n5.1.7",
-      "score": 0.5672
+      "chunk_id": "p40-3",
+      "page": 40,
+      "text": "Boundary Value Analysis \nBoundary Value Analysis (BVA) is a test technique based on exercising the boundaries of equivalence \npartitions. Therefore, BVA can only be used for ordered partitions. The minimum and maximum values of \na partition are its boundary values. In the case of BVA, if two elements belong to the same partition, all \nelements between them must also belong to that partition. \nBVA focuses on the boundary values of the partitions because developers are more likely to make errors \nwith these boundary values. Typical defects found by BVA are located where implemented boundaries \nare misplaced to positions above or below their intended positions or are omitted altogether.  \nThis syllabus covers two versions of the BVA: 2-value and 3-value BVA. They differ in terms of coverage \nitems per boundary that need to be exercised to achieve 100% coverage. \nIn 2-value BVA (Craig 2002, Myers 2011), for each boundary value there are two coverage items: this",
+      "score": 0.543
     }
   ],
   "cited_pages": [],
   "model": "openai/gpt-oss-120b",
   "latency_ms": {
-    "retrieve": 21,
-    "generate": 828,
-    "total": 1128
+    "retrieve": 5,
+    "generate": 721,
+    "total": 1005
   },
   "error": null
 }

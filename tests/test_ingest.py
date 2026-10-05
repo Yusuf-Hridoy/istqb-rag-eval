@@ -55,7 +55,9 @@ def test_chunk_ids_follow_page_sequence():
 def test_fake_embeddings_build_in_memory_store():
     from tests.conftest import FakeEmbeddings
 
-    store = Chroma(embedding_function=FakeEmbeddings())
+    store = Chroma(
+        embedding_function=FakeEmbeddings(), collection_metadata={"hnsw:space": "cosine"}
+    )
     store.add_documents([fake_page(7, "some content")])
     results = store.similarity_search_with_relevance_scores("some question", k=1)
     assert len(results) == 1
