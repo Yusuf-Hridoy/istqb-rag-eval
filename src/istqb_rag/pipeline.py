@@ -108,8 +108,11 @@ def answer(
         except Exception as exc:
             return _error_result(question, model, _ms(t0), exc)
 
-    if store._collection.count() == 0:
-        return _error_result(question, model, _ms(t0), RuntimeError(_EMPTY_STORE_MESSAGE))
+    try:
+        if store._collection.count() == 0:
+            raise RuntimeError(_EMPTY_STORE_MESSAGE)
+    except Exception as exc:
+        return _error_result(question, model, _ms(t0), exc)
 
     # 1. Retrieve
     t_retrieve = time.perf_counter()

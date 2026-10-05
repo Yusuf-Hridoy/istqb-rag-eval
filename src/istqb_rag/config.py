@@ -43,6 +43,9 @@ class Settings:
     last_content_page: int
     chroma_dir: Path
     collection_name: str
+    judge_model: str
+    golden_path: Path
+    runs_dir: Path
 
 
 def get_settings() -> Settings:
@@ -66,4 +69,7 @@ def get_settings() -> Settings:
         last_content_page=_int("LAST_CONTENT_PAGE", 63),
         chroma_dir=_path("CHROMA_DIR", ".chroma"),
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
+        judge_model=_str("JUDGE_MODEL", "gemini-3.5-flash"),
+        golden_path=_path("GOLDEN_PATH", "data/golden.jsonl"),
+        runs_dir=_path("RUNS_DIR", "runs"),
     )

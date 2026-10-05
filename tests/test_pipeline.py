@@ -74,6 +74,24 @@ def test_empty_store_returns_error():
     assert "istqb_rag.ingest" in result.error
 
 
+def test_broken_store_returns_error_not_raise():
+    class BrokenCollection:
+        def count(self):
+            raise RuntimeError("chroma is corrupted")
+
+    class BrokenStore:
+        _collection = BrokenCollection()
+
+    result = answer(
+        "any question",
+        llm=SpyLLM(responses=["x"]),
+        store=BrokenStore(),
+        settings=make_settings(),
+    )
+    assert result.status == "error"
+    assert "chroma is corrupted" in result.error
+
+
 def test_status_mapping_answered(store):
     llm = SpyLLM(responses=["Testing shows the presence of defects [p. 42]."])
     result = answer("any question", llm=llm, store=store, settings=make_settings())
