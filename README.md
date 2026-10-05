@@ -14,7 +14,7 @@ next: evaluating this exact pipeline with [Ragas](https://ragas.io/).
   stored in a local Chroma collection (cosine distance).
 - `answer(question)` is the single entry point: retrieve the top-k chunks,
   refuse to call the LLM if the best relevance score is below the floor,
-  otherwise generate one grounded answer with Groq (`llama-3.3-70b-versatile`,
+  otherwise generate one grounded answer with Groq (`openai/gpt-oss-120b`,
   temperature 0) that cites pages like `[p. 42]`.
 - Single-turn only: no chat history is ever passed to the LLM, so results are
   reproducible for evaluation.
