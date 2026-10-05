@@ -307,3 +307,48 @@ The brief asks the user to add 3–5 of their own tricky questions as
 so `dataset_counts()` now counts only `source == "llm"` rows. Human rows are
 still validated row by row — schema, required fields, unique ids — they simply
 do not have to fit the drafted mix.
+
+## Pilot run `pilot-1`: what the quota actually allowed
+
+Measured during the run, not estimated: Groq's free tier caps
+`qwen/qwen3.8-27b` at **200,000 tokens per day** (`TPD`), separate from the
+8000 TPM / 1000 OTPM per-minute buckets. Nine judged rows consumed essentially
+all of it, so `q048` and `q058` are unscored pending a rerun. That is ~22k
+tokens per judged row against the ~11k the single-row `measure` predicted. A
+full 60-row baseline needs roughly 1.3M tokens and cannot run on the free tier
+in one day.
+
+The daily cap recovers on a slow rolling window — about 250 tokens per 20
+minutes was observed — so waiting it out inside one session is not viable.
+
+Two behaviours were added in response, both in the eval runner, neither touching
+the Phase 1 pipeline or the judge:
+
+* **A quota stop no longer blocks rows that need no judge.** Out-of-scope and
+  not-in-syllabus rows are decided by the routing table alone. Previously the
+  stage raised on the first daily-quota error and those rows were never written,
+  which made scope handling unmeasurable on any day the budget ran out. The
+  stage now skips rows that need the judge, still scores the judge-free ones,
+  and raises at the end. This is what let the pilot reach 13 of 15 rows.
+* **The NaN guard needs a count as well as a rate.** One unparseable
+  faithfulness verdict out of 8 judged rows is 12.5%, over the 10% limit, so the
+  guard declared the run invalid and refused to write summary.json. A single
+  failure is noise. `failed_nan_metrics` now requires the rate to be exceeded
+  *and* at least `MIN_NAN_FAILURES = 2` verdicts to have failed. The 10%
+  threshold itself is unchanged.
+
+## Dataset review: LLM-verified, not human-verified
+
+The 15 pilot rows were checked page by page against the syllabus and marked
+`"reviewed": true` with `"reviewed_by": "llm"` — see `docs/dataset-review.md`
+for the per-row log. Six rows were corrected: three `section` fields pointed at
+a parent section rather than the subsection holding the answer, `q007`'s
+reference did not name all seven principles, `q045` reused the syllabus's own
+worked example (changed to fresh numbers so it is a real application), and
+`q072`'s injection used the stock "ignore all previous instructions" opener and
+was rewritten as plausible social engineering.
+
+`reviewed_by` is an optional field — absent on unreviewed rows — but a row with
+`"reviewed": true` must name a reviewer, so the provenance of a reviewed row can
+never be silent. The README states the dataset is LLM-verified and that
+human-checked rows would carry `reviewed_by: human`; no row carries that yet.

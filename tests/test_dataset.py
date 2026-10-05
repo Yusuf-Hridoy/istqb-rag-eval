@@ -46,7 +46,7 @@ def test_valid_file_loads(tmp_path):
                 section=None,
                 k_level=None,
             ),
-            _row(id="q003", reviewed=True),
+            _row(id="q003", reviewed=True, reviewed_by="human"),
         ],
     )
     rows = load_golden(path, validate_mix=False)
@@ -99,7 +99,13 @@ def test_non_in_scope_must_have_null_fields(tmp_path):
 
 
 def test_limit_applies_after_review_filter(tmp_path):
-    path = _write(tmp_path, [_row(reviewed=True), _row(id="q002", reviewed=True)])
+    path = _write(
+        tmp_path,
+        [
+            _row(reviewed=True, reviewed_by="llm"),
+            _row(id="q002", reviewed=True, reviewed_by="llm"),
+        ],
+    )
     rows = load_golden(path, validate_mix=False, limit=1)
     assert [r.id for r in rows] == ["q001"]
 
@@ -222,4 +228,18 @@ def test_the_real_golden_file_has_the_agreed_pilot_subset():
     assert Counter(r.k_level for r in in_scope) == {"K1": 4, "K2": 5, "K3": 2}
     assert sum(1 for r in pilot if r.multi_chunk) >= 3
     assert any("seven testing principles" in r.question.lower() for r in pilot)
-    assert all(not r.reviewed for r in rows)  # review is the user's step
+    # the 15 pilot rows have been verified; the other 60 are untouched
+    assert all(r.reviewed and r.reviewed_by == "llm" for r in pilot)
+    assert all(not r.reviewed for r in rows if not r.pilot)
+
+
+def test_reviewed_row_must_name_its_reviewer(tmp_path):
+    rows = [_row(id="q001", reviewed=True)]  # no reviewed_by
+    with pytest.raises(DatasetError, match="a reviewed row needs reviewed_by"):
+        load_golden(_write(tmp_path, rows), validate_mix=False, include_unreviewed=True)
+
+
+def test_unknown_reviewer_rejected(tmp_path):
+    rows = [_row(id="q001", reviewed=True, reviewed_by="nobody")]
+    with pytest.raises(DatasetError, match="reviewed_by must be one of"):
+        load_golden(_write(tmp_path, rows), validate_mix=False, include_unreviewed=True)

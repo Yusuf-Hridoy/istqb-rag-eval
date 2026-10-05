@@ -11,6 +11,10 @@ from istqb_rag.eval.score import METRIC_KEYS, metrics_for
 
 ERROR_RATE_LIMIT = 0.05
 NAN_RATE_LIMIT = 0.10
+# A rate alone is meaningless on a small run: with 8 judged rows a single
+# unparseable verdict is already 12.5%. A lone failure is noise; two or more
+# above the rate is the "judge mostly failed" case the guard exists to catch.
+MIN_NAN_FAILURES = 2
 WORST_N = 10
 SHORT_METRIC = {
     "context_precision": "prec",
@@ -216,11 +220,16 @@ def _print_table(summary: dict) -> None:
 
 
 def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tuple[str, float]]:
-    """Metrics whose parse-failure NaN rate is above the limit."""
+    """Metrics whose parse failures are both proportionally and absolutely bad.
+
+    Both conditions must hold: the rate is above ``limit`` *and* at least
+    ``MIN_NAN_FAILURES`` verdicts failed to parse. See MIN_NAN_FAILURES for why
+    the count matters as well as the rate.
+    """
     return [
         (key, stats["nan_rate"])
         for key, stats in summary["overall"].items()
-        if stats["expected"] and stats["nan_rate"] > limit
+        if stats["expected"] and stats["nan_rate"] > limit and stats["nan"] >= MIN_NAN_FAILURES
     ]
 
 

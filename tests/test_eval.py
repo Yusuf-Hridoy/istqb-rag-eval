@@ -9,6 +9,7 @@ from istqb_rag.eval.dataset import GoldenRow
 from istqb_rag.eval.generate import run_generate
 from istqb_rag.eval.report import (
     MIN_GROUP_N,
+    NAN_RATE_LIMIT,
     RunInvalid,
     build_summary,
     failed_nan_metrics,
@@ -436,3 +437,40 @@ def test_n_does_not_leak_into_overall_stats():
     summary = build_summary([_score_row("q001")])
     assert set(summary["overall"]) == set(METRIC_KEYS)
     assert failed_nan_metrics(summary) == []
+
+
+def test_quota_stop_still_scores_rows_that_need_no_judge(tmp_path):
+    """Scope rows are decided by the routing table, so judge quota cannot block them."""
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [
+        _row("q001"),
+        _row("q002"),  # in_scope: needs the judge, hits the quota
+        _row("q003", row_type="out_of_scope"),
+        _row("q004", row_type="not_in_syllabus"),
+    ]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+
+    def quota_after_first(question, response, reference, contexts, metric_keys):
+        if "q001" in question:
+            return ScoreOutcome(values={k: 0.5 for k in metric_keys})
+        return ScoreOutcome(api_error="429 tokens per day", quota_exhausted=True)
+
+    with pytest.raises(JudgeQuotaExhausted):
+        run_score("test-run", rows, quota_after_first, settings=settings)
+
+    saved = {r["id"] for r in _read_scores(settings, "test-run")}
+    assert saved == {"q001", "q003", "q004"}  # q002 left for the rerun
+
+
+def test_one_isolated_parse_failure_does_not_invalidate_a_small_run():
+    """At n=8 a single NaN is 12.5%; that is noise, not a broken judge."""
+    rows = [_score_row(f"q{i:03d}", f=(math.nan if i == 0 else 0.9)) for i in range(8)]
+    summary = build_summary(rows)
+    assert summary["overall"]["faithfulness"]["nan"] == 1
+    assert summary["overall"]["faithfulness"]["nan_rate"] > NAN_RATE_LIMIT
+    assert failed_nan_metrics(summary) == []  # rate exceeded, but only one failure
+
+
+def test_two_parse_failures_above_the_rate_still_invalidate():
+    rows = [_score_row(f"q{i:03d}", f=(math.nan if i < 2 else 0.9)) for i in range(8)]
+    assert [k for k, _ in failed_nan_metrics(build_summary(rows))] == ["faithfulness"]

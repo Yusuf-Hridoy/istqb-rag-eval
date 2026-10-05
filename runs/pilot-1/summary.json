@@ -1,0 +1,484 @@
+{
+  "overall": {
+    "context_precision": {
+      "mean": 0.7747,
+      "scored": 9,
+      "expected": 9,
+      "nan": 0,
+      "nan_rate": 0.0
+    },
+    "context_recall": {
+      "mean": 0.8395,
+      "scored": 9,
+      "expected": 9,
+      "nan": 0,
+      "nan_rate": 0.0
+    },
+    "faithfulness": {
+      "mean": 0.8298,
+      "scored": 7,
+      "expected": 8,
+      "nan": 1,
+      "nan_rate": 0.125
+    },
+    "response_relevancy": {
+      "mean": 0.8668,
+      "scored": 8,
+      "expected": 8,
+      "nan": 0,
+      "nan_rate": 0.0
+    }
+  },
+  "by_chapter": {
+    "1": {
+      "context_precision": {
+        "mean": 0.1666,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.4445,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.9772,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 2,
+      "n_too_small": true
+    },
+    "2": {
+      "context_precision": {
+        "mean": 1.0,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8334,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.9166,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.8866,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 2,
+      "n_too_small": true
+    },
+    "3": {
+      "context_precision": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.9566,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 1,
+      "n_too_small": true
+    },
+    "4": {
+      "context_precision": {
+        "mean": 0.8796,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 1.0,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.6583,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.824,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 3,
+      "n_too_small": false
+    },
+    "5": {
+      "context_precision": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 1.0,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 1,
+        "nan": 1,
+        "nan_rate": 1.0
+      },
+      "response_relevancy": {
+        "mean": 0.755,
+        "scored": 1,
+        "expected": 1,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 1,
+      "n_too_small": true
+    }
+  },
+  "by_k_level": {
+    "K1": {
+      "context_precision": {
+        "mean": 0.7778,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.8519,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 1.0,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.8997,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 3,
+      "n_too_small": false
+    },
+    "K2": {
+      "context_precision": {
+        "mean": 0.75,
+        "scored": 4,
+        "expected": 4,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.75,
+        "scored": 4,
+        "expected": 4,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.9028,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.8644,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 4,
+      "n_too_small": false
+    },
+    "K3": {
+      "context_precision": {
+        "mean": 0.8195,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 1.0,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.1,
+        "scored": 1,
+        "expected": 2,
+        "nan": 1,
+        "nan_rate": 0.5
+      },
+      "response_relevancy": {
+        "mean": 0.821,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 2,
+      "n_too_small": true
+    }
+  },
+  "by_multi_chunk": {
+    "False": {
+      "context_precision": {
+        "mean": 0.9398,
+        "scored": 6,
+        "expected": 6,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.9444,
+        "scored": 6,
+        "expected": 6,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 0.7617,
+        "scored": 5,
+        "expected": 6,
+        "nan": 1,
+        "nan_rate": 0.1667
+      },
+      "response_relevancy": {
+        "mean": 0.8334,
+        "scored": 6,
+        "expected": 6,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 6,
+      "n_too_small": false
+    },
+    "True": {
+      "context_precision": {
+        "mean": 0.4444,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "context_recall": {
+        "mean": 0.6296,
+        "scored": 3,
+        "expected": 3,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "faithfulness": {
+        "mean": 1.0,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "response_relevancy": {
+        "mean": 0.9669,
+        "scored": 2,
+        "expected": 2,
+        "nan": 0,
+        "nan_rate": 0.0
+      },
+      "n": 3,
+      "n_too_small": false
+    }
+  },
+  "in_scope_answer_rate": {
+    "rate": 0.8889,
+    "answered": 8,
+    "total": 9,
+    "not_answered_ids": [
+      "q007"
+    ]
+  },
+  "scope_handling": {
+    "out_of_scope_accuracy": 0.5,
+    "out_of_scope_total": 2,
+    "not_in_syllabus_accuracy": 1.0,
+    "not_in_syllabus_total": 2,
+    "possible_hallucination_ids": []
+  },
+  "errors": {
+    "count": 0,
+    "ids": [],
+    "error_rate": 0.0,
+    "error_rate_ok": true
+  },
+  "worst_10": [
+    {
+      "id": "q007",
+      "chapter": "1",
+      "k_level": "K2",
+      "status": "no_context",
+      "avg": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q027",
+      "chapter": "4",
+      "k_level": "K3",
+      "status": "answered",
+      "avg": 0.6564,
+      "context_precision": 0.6389,
+      "context_recall": 1.0,
+      "faithfulness": 0.1,
+      "response_relevancy": 0.8869
+    },
+    {
+      "id": "q001",
+      "chapter": "1",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": 0.7998,
+      "context_precision": 0.3333,
+      "context_recall": 0.8889,
+      "faithfulness": 1.0,
+      "response_relevancy": 0.9772
+    },
+    {
+      "id": "q011",
+      "chapter": "2",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": 0.8847,
+      "context_precision": 1.0,
+      "context_recall": 0.6667,
+      "faithfulness": 1.0,
+      "response_relevancy": 0.8721
+    },
+    {
+      "id": "q025",
+      "chapter": "4",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.9026,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.875,
+      "response_relevancy": 0.7354
+    },
+    {
+      "id": "q045",
+      "chapter": "5",
+      "k_level": "K3",
+      "status": "answered",
+      "avg": 0.9183,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": null,
+      "response_relevancy": 0.755
+    },
+    {
+      "id": "q013",
+      "chapter": "2",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.9336,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 0.8333,
+      "response_relevancy": 0.9011
+    },
+    {
+      "id": "q030",
+      "chapter": "4",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": 0.9624,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "response_relevancy": 0.8497
+    },
+    {
+      "id": "q020",
+      "chapter": "3",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": 0.9891,
+      "context_precision": 1.0,
+      "context_recall": 1.0,
+      "faithfulness": 1.0,
+      "response_relevancy": 0.9566
+    }
+  ],
+  "latency_ms": {
+    "median": 4386,
+    "p95": 12021.0
+  }
+}

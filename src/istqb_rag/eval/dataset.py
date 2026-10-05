@@ -17,6 +17,9 @@ RowType = Literal["in_scope", "not_in_syllabus", "out_of_scope"]
 ALLOWED_TYPES = {"in_scope", "not_in_syllabus", "out_of_scope"}
 ALLOWED_K_LEVELS = {"K1", "K2", "K3"}
 ALLOWED_SOURCES = {"llm", "human"}
+# Optional: who checked the row against the syllabus page. Absent on
+# unreviewed rows, so it is deliberately not in REQUIRED_KEYS.
+ALLOWED_REVIEWERS = {"llm", "human"}
 REQUIRED_KEYS = {
     "id",
     "question",
@@ -58,6 +61,7 @@ class GoldenRow:
     source: str
     pilot: bool
     reviewed: bool
+    reviewed_by: str | None = None
 
 
 def _fail(lineno: int, msg: str) -> DatasetError:
@@ -86,6 +90,11 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
         raise _fail(lineno, f"{row_id}: reviewed must be a boolean")
     if not isinstance(raw["pilot"], bool):
         raise _fail(lineno, f"{row_id}: pilot must be a boolean")
+    reviewed_by = raw.get("reviewed_by")
+    if reviewed_by is not None and reviewed_by not in ALLOWED_REVIEWERS:
+        raise _fail(lineno, f"{row_id}: reviewed_by must be one of {sorted(ALLOWED_REVIEWERS)}")
+    if raw["reviewed"] and reviewed_by is None:
+        raise _fail(lineno, f"{row_id}: a reviewed row needs reviewed_by")
 
     row_type = raw["type"]
     if row_type == "in_scope":
@@ -132,6 +141,7 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
         source=raw["source"],
         pilot=raw["pilot"],
         reviewed=raw["reviewed"],
+        reviewed_by=reviewed_by,
     )
 
 

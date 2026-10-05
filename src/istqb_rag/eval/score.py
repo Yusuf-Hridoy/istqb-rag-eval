@@ -403,6 +403,7 @@ def run_score(
     pending = [r for r in rows if r.id not in done and r.id in answers]
     scored = skipped = judged = api_errors = 0
     calls = prompt_tokens = completion_tokens = 0
+    quota_error: str | None = None
     write_header = not scores_path.exists()
     with scores_path.open("a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=SCORES_COLUMNS)
@@ -416,6 +417,12 @@ def run_score(
             if result is None:
                 continue
             metrics = metrics_for(row.type, result.status)
+            # Out-of-scope and not-in-syllabus rows are judged by the routing
+            # table alone, so judge quota cannot affect them. Keep scoring them
+            # after a quota stop, or scope accuracy would be unmeasurable on any
+            # day the judge budget runs out.
+            if quota_error and metrics:
+                continue
             outcome = ScoreOutcome()
             if metrics:
                 outcome = scorer(
@@ -429,12 +436,8 @@ def run_score(
                 prompt_tokens += outcome.prompt_tokens
                 completion_tokens += outcome.completion_tokens
                 if outcome.quota_exhausted:
-                    remaining = len([r for r in pending if r.id not in done])
-                    print(
-                        f"Judge quota exhausted — {remaining} rows left, "
-                        "rerun the same command later."
-                    )
-                    raise JudgeQuotaExhausted(outcome.api_error or "judge quota exhausted")
+                    quota_error = outcome.api_error or "judge quota exhausted"
+                    continue
                 if not outcome.measured:
                     # Not written, so a rerun retries this row.
                     api_errors += 1
@@ -462,6 +465,12 @@ def run_score(
             done.add(row.id)
             scored += 1
             print(f"[{scored}] {row.id}: status={result.status} metrics={len(outcome.values)}")
+
+    if quota_error:
+        remaining = len([r for r in pending if r.id not in done])
+        print(f"Judge quota exhausted — {remaining} rows left, rerun the same command later.")
+        raise JudgeQuotaExhausted(quota_error)
+
     return {
         "scored": scored,
         "skipped": skipped,
