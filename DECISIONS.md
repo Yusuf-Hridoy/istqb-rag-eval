@@ -265,3 +265,45 @@ The chat tab's "Score this answer" button calls the same `make_scorer()` from
 `eval/score.py` rather than re-creating the Ragas setup. With no reference
 answer it can only compute faithfulness and response relevancy, which the
 caption says; the button is hidden when no judge API key is configured.
+
+## Pilot baseline: n=15 by user choice
+
+The full 75-row dataset stays in `data/golden.jsonl`; the first baseline runs on
+a 15-row subset marked `"pilot": true`. The remaining 60 rows are kept for later
+runs, so this is a staging decision, not a reduction of the dataset.
+
+`MIN_REVIEWED_ROWS` drops from 60 to 15 to match. The pilot subset holds its
+own miniature of the brief's mix:
+
+| | rows |
+|---|---|
+| in_scope | 11 — ch1 2, ch2 2, ch3 1, ch4 3, ch5 2, ch6 1 |
+| K-levels | K1 4, K2 5, K3 2 |
+| multi_chunk | 5 (including the seven-testing-principles row, q007) |
+| not_in_syllabus | 2 |
+| out_of_scope | 2, one of them a prompt injection (q072) |
+
+**What n=15 costs.** At roughly 8 judge calls per answered row the pilot is
+about 120 calls instead of ~480, which is the point. The price is that most
+per-group means stop being readable: with 11 in-scope rows spread over six
+chapters, four chapters land on n ≤ 2. Treat the pilot as a check that the
+machinery works end to end and that the overall numbers are plausible — not as
+evidence about any particular chapter or K-level.
+
+So `_grouped()` now records `n` and `n_too_small` (below `MIN_GROUP_N = 3`) for
+every group in summary.json. The console report prints `n=` beside each group
+and appends "(n too small)"; the dashboard greys those cells to "n too small"
+and leaves the thin groups out of the bar charts, naming them underneath
+instead. Thin groups keep their means — they are marked, not dropped, because
+hiding them would be its own kind of dishonesty.
+
+`runs/fixture/` was rebuilt pilot-shaped (15 rows) so the dashboard demonstrates
+this path on a fresh clone. Its numbers remain invented.
+
+## check_mix counts only LLM-drafted rows
+
+The brief asks the user to add 3–5 of their own tricky questions as
+`source: "human"`. Those would have broken the 60/5/10 and per-chapter checks,
+so `dataset_counts()` now counts only `source == "llm"` rows. Human rows are
+still validated row by row — schema, required fields, unique ids — they simply
+do not have to fit the drafted mix.

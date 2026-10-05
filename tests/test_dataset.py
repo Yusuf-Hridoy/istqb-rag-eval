@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from istqb_rag.eval.dataset import DatasetError, load_golden
+from istqb_rag.eval.dataset import DatasetError, dataset_counts, load_golden
 
 
 def _row(**overrides):
@@ -19,6 +19,7 @@ def _row(**overrides):
         "type": "in_scope",
         "multi_chunk": False,
         "source": "llm",
+        "pilot": False,
         "reviewed": False,
     }
     base.update(overrides)
@@ -165,8 +166,6 @@ def test_the_real_golden_file_matches_the_brief():
     """The committed dataset itself must satisfy the mix."""
     from pathlib import Path
 
-    from istqb_rag.eval.dataset import dataset_counts
-
     path = Path(__file__).resolve().parents[1] / "data" / "golden.jsonl"
     rows = load_golden(path, include_unreviewed=True)
     types, chapters = dataset_counts(rows)
@@ -175,3 +174,52 @@ def test_the_real_golden_file_matches_the_brief():
     assert chapters == {1: 10, 2: 8, 3: 6, 4: 18, 5: 14, 6: 4}
     assert all(r.source == "llm" for r in rows)
     assert sum(1 for r in rows if r.multi_chunk) >= 8
+
+
+# --- Pilot subset and human-authored rows (amendment) ----------------------
+
+
+def test_human_rows_do_not_count_towards_the_mix(tmp_path):
+    """A user-added source: "human" row must not break the 60/5/10 check."""
+    rows = _mix_rows()
+    rows.append(_row(id="q900", source="human", chapter=4, section="4.2"))
+    loaded = load_golden(_write(tmp_path, rows), include_unreviewed=True)
+    assert len(loaded) == 76  # the human row loads
+    types, chapters = dataset_counts(loaded)
+    assert types["in_scope"] == 60  # but is not counted in the mix
+    assert chapters[4] == 18
+
+
+def test_human_rows_still_validated_per_row(tmp_path):
+    bad = _row(id="q900", source="human", reference=None)
+    with pytest.raises(DatasetError, match="in_scope row needs a non-empty reference"):
+        load_golden(_write(tmp_path, _mix_rows() + [bad]), include_unreviewed=True)
+
+
+def test_pilot_must_be_a_boolean(tmp_path):
+    rows = _mix_rows()
+    rows[0]["pilot"] = "yes"
+    with pytest.raises(DatasetError, match="pilot must be a boolean"):
+        load_golden(_write(tmp_path, rows), include_unreviewed=True)
+
+
+def test_the_real_golden_file_has_the_agreed_pilot_subset():
+    """The committed dataset's 15 pilot rows match the shape the user asked for."""
+    from collections import Counter
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "data" / "golden.jsonl"
+    rows = load_golden(path, include_unreviewed=True)
+    pilot = [r for r in rows if r.pilot]
+    assert len(pilot) == 15
+    assert Counter(r.type for r in pilot) == {
+        "in_scope": 11,
+        "not_in_syllabus": 2,
+        "out_of_scope": 2,
+    }
+    in_scope = [r for r in pilot if r.type == "in_scope"]
+    assert Counter(r.chapter for r in in_scope) == {1: 2, 2: 2, 3: 1, 4: 3, 5: 2, 6: 1}
+    assert Counter(r.k_level for r in in_scope) == {"K1": 4, "K2": 5, "K3": 2}
+    assert sum(1 for r in pilot if r.multi_chunk) >= 3
+    assert any("seven testing principles" in r.question.lower() for r in pilot)
+    assert all(not r.reviewed for r in rows)  # review is the user's step

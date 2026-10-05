@@ -7,7 +7,13 @@ import pytest
 
 from istqb_rag.eval.dataset import GoldenRow
 from istqb_rag.eval.generate import run_generate
-from istqb_rag.eval.report import RunInvalid, build_summary, failed_nan_metrics, run_report
+from istqb_rag.eval.report import (
+    MIN_GROUP_N,
+    RunInvalid,
+    build_summary,
+    failed_nan_metrics,
+    run_report,
+)
 from istqb_rag.eval.score import (
     METRIC_KEYS,
     SCORES_COLUMNS,
@@ -36,6 +42,7 @@ def _row(row_id="q001", row_type="in_scope", status_answered=True):
         type=row_type,
         multi_chunk=False,
         source="llm",
+        pilot=False,
         reviewed=True,
     )
 
@@ -392,3 +399,40 @@ def test_per_minute_limit_is_not_treated_as_daily_exhaustion():
     assert is_daily_quota_error(Exception(GEMINI_DAILY))
     assert is_daily_quota_error(Exception("429: limit 1000 requests per day"))
     assert not is_daily_quota_error(ValueError("could not parse judge output"))
+
+
+# --- Group n and the small-sample flag (pilot amendment) -------------------
+
+
+def test_summary_carries_n_per_group():
+    rows = [
+        _score_row("q001", chapter="1"),
+        _score_row("q002", chapter="1"),
+        _score_row("q003", chapter="1"),
+        _score_row("q004", chapter="2"),
+    ]
+    summary = build_summary(rows)
+    assert summary["by_chapter"]["1"]["n"] == 3
+    assert summary["by_chapter"]["2"]["n"] == 1
+
+
+def test_groups_below_min_n_are_flagged_but_still_reported():
+    """A thin group keeps its mean — it is marked, not dropped."""
+    rows = [_score_row("q001", chapter="1", cp=0.8), _score_row("q002", chapter="2", cp=0.4)]
+    summary = build_summary(rows)
+    assert summary["by_chapter"]["1"]["n_too_small"] is True
+    assert summary["by_chapter"]["1"]["context_precision"]["mean"] == 0.8
+
+
+def test_group_at_min_n_is_not_flagged():
+    rows = [_score_row(f"q{i:03d}", chapter="1") for i in range(MIN_GROUP_N)]
+    summary = build_summary(rows)
+    assert summary["by_chapter"]["1"]["n"] == MIN_GROUP_N
+    assert summary["by_chapter"]["1"]["n_too_small"] is False
+
+
+def test_n_does_not_leak_into_overall_stats():
+    """failed_nan_metrics iterates overall; a stray int there would crash it."""
+    summary = build_summary([_score_row("q001")])
+    assert set(summary["overall"]) == set(METRIC_KEYS)
+    assert failed_nan_metrics(summary) == []

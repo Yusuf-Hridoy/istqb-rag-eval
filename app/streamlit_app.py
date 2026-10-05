@@ -13,6 +13,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from istqb_rag.config import get_settings  # noqa: E402
+from istqb_rag.eval.report import MIN_GROUP_N  # noqa: E402
 from istqb_rag.eval.score import METRIC_KEYS  # noqa: E402
 from istqb_rag.pipeline import answer  # noqa: E402
 
@@ -83,18 +84,55 @@ def _metric_card(column, key: str, stats: dict) -> None:
     column.caption(f"{stats.get('scored', 0)} rows scored · {stats.get('nan', 0)} NaN")
 
 
-def _group_chart(summary: dict, section: str, title: str) -> None:
+def _group_table(groups: dict) -> pd.DataFrame:
+    """Group means with n, greying out any group too thin to read."""
+    data = {}
+    for group, stats in groups.items():
+        label = f"{group} (n={stats['n']})"
+        if stats.get("n_too_small"):
+            data[label] = dict.fromkeys(METRIC_LABELS.values(), "n too small")
+        else:
+            data[label] = {
+                METRIC_LABELS[key]: (
+                    f"{stats[key]['mean']:.3f}" if stats[key]["mean"] is not None else "—"
+                )
+                for key in METRIC_KEYS
+            }
+    return pd.DataFrame(data)
+
+
+def _grey_small_n(frame: pd.DataFrame):
+    return frame.style.map(
+        lambda v: "color: #999; font-style: italic" if v == "n too small" else ""
+    )
+
+
+def _group_section(summary: dict, section: str, title: str) -> None:
+    """A bar chart of the groups with enough rows, plus a table carrying every n."""
     groups = summary.get(section, {})
     if not groups:
         return
-    frame = pd.DataFrame(
-        {
-            METRIC_LABELS[key]: {group: stats[key]["mean"] for group, stats in groups.items()}
-            for key in METRIC_KEYS
-        }
-    )
     st.caption(title)
-    st.bar_chart(frame)
+
+    big = {g: s for g, s in groups.items() if not s.get("n_too_small")}
+    if big:
+        st.bar_chart(
+            pd.DataFrame(
+                {
+                    METRIC_LABELS[key]: {
+                        f"{g} (n={s['n']})": s[key]["mean"] for g, s in big.items()
+                    }
+                    for key in METRIC_KEYS
+                }
+            )
+        )
+    thin = [g for g, s in groups.items() if s.get("n_too_small")]
+    if thin:
+        st.caption(
+            f"Not charted, fewer than {MIN_GROUP_N} rows: "
+            + ", ".join(f"{g} (n={groups[g]['n']})" for g in thin)
+        )
+    st.dataframe(_grey_small_n(_group_table(groups)), use_container_width=True)
 
 
 def render_eval_tab(settings) -> None:
@@ -150,23 +188,17 @@ def render_eval_tab(settings) -> None:
     if rate["not_answered_ids"]:
         st.info("False refusals (in-scope, not answered): " + ", ".join(rate["not_answered_ids"]))
 
-    _group_chart(summary, "by_chapter", "Metrics by chapter")
-    _group_chart(summary, "by_k_level", "Metrics by K-level")
+    _group_section(summary, "by_chapter", "Metrics by chapter")
+    _group_section(summary, "by_k_level", "Metrics by K-level")
 
     st.caption("Multi-chunk answers vs single-chunk")
     multi = summary.get("by_multi_chunk", {})
     if multi:
-        st.dataframe(
-            pd.DataFrame(
-                {
-                    ("multi-chunk" if group == "True" else "single-chunk"): {
-                        METRIC_LABELS[key]: stats[key]["mean"] for key in METRIC_KEYS
-                    }
-                    for group, stats in multi.items()
-                }
-            ),
-            use_container_width=True,
-        )
+        renamed = {
+            ("multi-chunk" if group == "True" else "single-chunk"): stats
+            for group, stats in multi.items()
+        }
+        st.dataframe(_grey_small_n(_group_table(renamed)), use_container_width=True)
 
     st.caption("Worst 10 in-scope rows")
     worst = pd.DataFrame(summary["worst_10"])

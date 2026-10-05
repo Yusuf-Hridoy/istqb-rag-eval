@@ -15,7 +15,7 @@ from istqb_rag.eval import report as report_mod
 from istqb_rag.eval import score as score_mod
 from istqb_rag.eval.dataset import DatasetError, load_golden
 
-MIN_REVIEWED_ROWS = 60
+MIN_REVIEWED_ROWS = 15  # pilot baseline; the full 75 rows stay in the file
 
 
 def _load_rows(args) -> list:

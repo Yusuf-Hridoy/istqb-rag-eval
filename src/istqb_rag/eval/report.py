@@ -12,6 +12,14 @@ from istqb_rag.eval.score import METRIC_KEYS, metrics_for
 ERROR_RATE_LIMIT = 0.05
 NAN_RATE_LIMIT = 0.10
 WORST_N = 10
+SHORT_METRIC = {
+    "context_precision": "prec",
+    "context_recall": "rec",
+    "faithfulness": "faith",
+    "response_relevancy": "rel",
+}
+# Below this many rows a group mean says more about the sample than the system.
+MIN_GROUP_N = 3
 
 
 class RunInvalid(RuntimeError):
@@ -60,11 +68,23 @@ def _metric_stats(rows: list[dict]) -> dict:
 
 
 def _grouped(rows: list[dict], field: str) -> dict:
+    """Per-group metric stats, each carrying the group's own row count.
+
+    ``n`` matters on a small pilot: a chapter mean over two rows is not
+    comparable to one over eighteen, and ``n_too_small`` says so explicitly so
+    the report and the dashboard do not have to re-derive the rule.
+    """
     groups: dict[str, list[dict]] = {}
     for row in rows:
         key = str(row[field])
         groups.setdefault(key, []).append(row)
-    return {key: _metric_stats(group) for key, group in sorted(groups.items())}
+    out = {}
+    for key, group in sorted(groups.items()):
+        stats = _metric_stats(group)
+        stats["n"] = len(group)
+        stats["n_too_small"] = len(group) < MIN_GROUP_N
+        out[key] = stats
+    return out
 
 
 def _worst_rows(rows: list[dict], n: int = WORST_N) -> list[dict]:
@@ -173,8 +193,26 @@ def _print_table(summary: dict) -> None:
         f"errors: {errors['count']} (rate {errors['error_rate'] * 100:.1f}%,"
         f" {'OK' if errors['error_rate_ok'] else 'RUN FAILED'})"
     )
+    for section, title in (
+        ("by_chapter", "chapter"),
+        ("by_k_level", "K-level"),
+        ("by_multi_chunk", "multi_chunk"),
+    ):
+        groups = summary.get(section, {})
+        if not groups:
+            continue
+        print(f"\n-- by {title} --")
+        for name, stats in groups.items():
+            cells = []
+            for key in METRIC_KEYS:
+                mean = stats[key]["mean"]
+                label = SHORT_METRIC[key]
+                cells.append(f"{label}={mean:.2f}" if mean is not None else f"{label}=-")
+            flag = "  (n too small)" if stats["n_too_small"] else ""
+            print(f"  {name:<12} n={stats['n']:<3} " + "  ".join(cells) + flag)
+
     lat = summary["latency_ms"]
-    print(f"latency: median {lat['median']:.0f} ms, p95 {lat['p95']:.0f} ms")
+    print(f"\nlatency: median {lat['median']:.0f} ms, p95 {lat['p95']:.0f} ms")
 
 
 def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tuple[str, float]]:

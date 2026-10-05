@@ -65,12 +65,62 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+## Evaluation
+
+Phase 2 measures the Phase 1 pipeline exactly as it is — no prompt, chunking or
+retrieval settings were changed.
+
+**What is measured.** Each golden row is routed to the metrics that can mean
+something for it. In-scope rows get context precision and context recall
+(retrieval is scored even when the bot declined to answer, because that is
+where retrieval failures show up). In-scope rows that *were* answered also get
+faithfulness and response relevancy. Out-of-scope and not-in-syllabus rows get
+no judge at all: they are correct if the bot refused or found no context, and a
+not-in-syllabus row that was answered is flagged as a possible hallucination.
+
+**Golden dataset:** LLM-drafted, human review pending. `data/golden.jsonl` holds
+75 rows; the first baseline runs on the 15 marked `"pilot": true`. Every row is
+`reviewed: false` until a human checks it against the syllabus page, and the run
+refuses to start with fewer than `MIN_REVIEWED_ROWS` reviewed rows. This line
+becomes "LLM-drafted, human-reviewed" once that pass is done.
+
+**Running it:**
+
+```bash
+uv run python -m istqb_rag.eval all      --run-id pilot-1   # generate, score, report
+uv run python -m istqb_rag.eval measure  --run-id pilot-1   # judge cost for one row
+```
+
+The stages are separate so answers are generated once and can be re-scored
+later. Both resume: rerun the same command after a crash or a rate limit and it
+picks up where it stopped.
+
+### Baseline results (pilot, n=15)
+
+Pending — fill from `runs/pilot-1/summary.json` after the pilot run.
+
+| Metric | Mean | Rows scored | NaN |
+|---|---|---|---|
+| Context precision | — | — | — |
+| Context recall | — | — | — |
+| Faithfulness | — | — | — |
+| Response relevancy | — | — | — |
+
+At **pilot, n=15** most per-group means rest on two or three rows. Groups below
+three rows are reported as "n too small" in both the console report and the
+dashboard, and are left out of the dashboard charts. Read the pilot as a check
+that the pipeline and the judge work end to end, not as evidence about a given
+chapter or K-level.
+
+Findings: `docs/phase-2-findings.md` (written after the pilot run).
+
 ## Roadmap
 
-- **Phase 1 (this phase):** ingest + single-turn RAG pipeline with citations
+- **Phase 1:** ingest + single-turn RAG pipeline with citations
   and refusal, CLI and Streamlit chat.
-- **Phase 2:** golden dataset + Ragas evaluation runner scored against
-  `answer()`, with an eval dashboard tab.
+- **Phase 2 (this phase):** golden dataset + Ragas evaluation runner scored
+  against `answer()`, with an eval dashboard tab. First baseline is a 15-row
+  pilot; the remaining 60 rows are kept for later runs.
 - **Phase 3:** retrieval experiments (e.g. section-aware chunking) measured with
   Ragas.
 - **Phase 4:** judge-model evaluation and final report.

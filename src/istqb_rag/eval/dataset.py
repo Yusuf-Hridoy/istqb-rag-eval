@@ -28,6 +28,7 @@ REQUIRED_KEYS = {
     "type",
     "multi_chunk",
     "source",
+    "pilot",
     "reviewed",
 }
 
@@ -55,6 +56,7 @@ class GoldenRow:
     type: RowType
     multi_chunk: bool
     source: str
+    pilot: bool
     reviewed: bool
 
 
@@ -82,6 +84,8 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
         raise _fail(lineno, f"{row_id}: source must be one of {sorted(ALLOWED_SOURCES)}")
     if not isinstance(raw["reviewed"], bool):
         raise _fail(lineno, f"{row_id}: reviewed must be a boolean")
+    if not isinstance(raw["pilot"], bool):
+        raise _fail(lineno, f"{row_id}: pilot must be a boolean")
 
     row_type = raw["type"]
     if row_type == "in_scope":
@@ -126,14 +130,20 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
         type=row_type,
         multi_chunk=raw["multi_chunk"],
         source=raw["source"],
+        pilot=raw["pilot"],
         reviewed=raw["reviewed"],
     )
 
 
 def dataset_counts(rows: list[GoldenRow]) -> tuple[dict[str, int], dict[int, int]]:
-    """(rows per type, in-scope rows per chapter) for the whole dataset."""
-    types = Counter(r.type for r in rows)
-    chapters = Counter(r.chapter for r in rows if r.type == "in_scope")
+    """(rows per type, in-scope rows per chapter) over the LLM-drafted rows.
+
+    Only ``source == "llm"`` rows count towards the brief's mix, so the user can
+    add their own ``source: "human"`` questions without breaking validation.
+    """
+    drafted = [r for r in rows if r.source == "llm"]
+    types = Counter(r.type for r in drafted)
+    chapters = Counter(r.chapter for r in drafted if r.type == "in_scope")
     return dict(types), dict(chapters)
 
 
@@ -158,7 +168,8 @@ def check_mix(rows: list[GoldenRow]) -> None:
         problems.append(f"chapter {chapter}: unexpected chapter with {chapters[chapter]} rows")
     if problems:
         raise DatasetError(
-            "golden.jsonl does not match the brief's mix:\n  " + "\n  ".join(problems)
+            'golden.jsonl does not match the brief\'s mix (source="llm" rows only):\n  '
+            + "\n  ".join(problems)
         )
 
 
