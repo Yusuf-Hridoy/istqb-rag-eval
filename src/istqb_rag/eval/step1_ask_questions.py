@@ -64,6 +64,7 @@ def write_run_config(
         "chunking": settings.chunking,
         "collection": active_collection(settings),
         "answer_format": settings.answer_format,
+        "prompt_version": settings.prompt_version,
         "ragas_version": ragas.__version__,
         "dry_run": dry_run,
     }

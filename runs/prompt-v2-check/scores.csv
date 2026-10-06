@@ -1,0 +1,16 @@
+id,type,chapter,k_level,multi_chunk,status,cited_pages,best_score,context_precision,context_recall,faithfulness,response_relevancy,latency_ms,possible_hallucination,judge_truncated,retrieved_pages,format_fallback,answer_sha256
+q001,in_scope,1,K1,true,answered,15,0.7729,,,,,1833,,,48;18;15,,151447a1c071174a5520378c7a87a2db461db3bbda898c1f117fac1da24ec3a8
+q007,in_scope,1,K2,true,no_context,,0.7339,,,,,1372,,,17;14;48,,2f08fd8407c6c4fb7e290ab2a41952ed34292a221229cf549f0635c420fcb602
+q011,in_scope,2,K1,false,answered,26,0.7466,,,,,4609,,,26;24;39;25,,cf8b18f85e29aec1fea517b1607985cd3bb61b203cd38e0af4062f6da6c3ccfd
+q013,in_scope,2,K2,false,answered,27,0.8309,,,,,2506,,,27;26,,dc3d2e38258bb603ea172564c919588288a904ca95eeec6b57987de05692db9f
+q020,in_scope,3,K2,true,answered,33;34;15,0.9013,,,,,1515,,,34;33;15,,3cb2382e34d5de7d97a02efd6ed96598c46ad2ba2b886cad08f9095156994e44
+q025,in_scope,4,K2,false,answered,39,0.8760,,,,,7159,,,39;38;43,,36fc69c750bf8ecb5ce8012c4c57a4144842e01e8c38416288ab92183620fe07
+q027,in_scope,4,K3,false,answered,39;40,0.7723,,,,,2446,,,39;40,,786d711bbcf907a956f1b5fd8d241e0a26c6dad307f3e2ba2c04c199187b077b
+q030,in_scope,4,K1,false,answered,41,0.8478,,,,,10043,,,41,,33f2db696a2e771b615093c08a6611b644ae650eacaabac2aa9fa4ff831fdab8
+q045,in_scope,5,K3,false,answered,50,0.7952,,,,,13415,,,50;49,,37194ec76e3cc61b86cc9f99f080e1cd1bab2fef1960efbab53b6a3590f7f4cd
+q048,in_scope,5,K1,true,answered,50;51,0.8641,,,,,7810,,,50;51;22,,f6759d7737f9207c27cb42ba34af6fcddeb8284460185dad5efac9f470d157bf
+q058,in_scope,6,K2,true,answered,59,0.7588,,,,,10651,,,22;59;16,,c1ee03b8b5c1762060923cdeb3b6b8a2e0d99849c1ebd8135142e39c54e3c0ba
+q061,not_in_syllabus,,,false,no_context,,0.5393,,,,,9985,,,40;44,,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+q062,not_in_syllabus,,,false,no_context,,0.6594,,,,,11494,,,15;20;44;29,,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+q066,out_of_scope,,,false,refused,,0.4106,,,,,8001,,,40;39,,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+q072,out_of_scope,,,false,refused,,0.6230,,,,,7063,,,36;22;45,,9e712175ee97d7c1b19ba8668056eb0ea84a55b27a641b010d881fb4581a7329

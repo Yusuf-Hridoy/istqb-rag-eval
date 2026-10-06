@@ -110,6 +110,31 @@ text. `ANSWER_FORMAT=text` reproduces every text-mode run.
 **Experiment 2's measured gains were not credited.**
 A repeat of the unchanged baseline reproduced both of them.
 
+**Answer prompt is version 2: 2-4 sentences, direct answer first, syllabus
+wording only.**
+The 150-word rule allowed long answers that restated the excerpts.
+`PROMPT_VERSION` is recorded in every new run's config.json. **Every run in
+`runs/` and every number in the README was produced with version 1.** A
+judge-free check (`prompt-v2-check`) showed no change in citation rate,
+citation validity, page hit rate, scope accuracy or answer rate, and no row
+changed status; answer length moved only slightly (median 55 to 50 words) and
+not in one direction (the longest answer grew), which on one run of a
+nondeterministic model is not attributable.
+
+## Interface
+
+**The chat tab renders an answer once, from `_render_result`.**
+The history loop also printed `message["content"]`, which for an assistant row
+is the same string, so every past answer appeared twice.
+
+**"Sources used" lists only chunks the answer cited; the rest are collapsed
+separately.**
+Retrieval always returns `TOP_K` chunks, so listing all of them implied the
+answer used them all. Retrieval itself is unchanged.
+
+**Auto-scoring is off by default.**
+Each score costs about 3 judge calls, so it is opt-in per session.
+
 ## Honesty guards
 
 **Status is matched by string equality, and that is a known flaw.**

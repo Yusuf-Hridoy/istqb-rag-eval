@@ -230,36 +230,66 @@ def get_scorer():
     return make_scorer()
 
 
+def score_caption(values: dict) -> str:
+    """One line: the two scores and why the other two are absent."""
+
+    def fmt(key):
+        value = values.get(key)
+        return "—" if value is None else f"{value:.2f}"
+
+    return (
+        f"Judge: faithfulness {fmt('faithfulness')} · "
+        f"relevance {fmt('response_relevancy')} "
+        "(no reference answer, so retrieval metrics aren't scored)"
+    )
+
+
+def _score_now(result) -> None:
+    with st.spinner("Asking the judge…"):
+        outcome = get_scorer()(
+            result.question,
+            result.answer,
+            None,
+            [c.text for c in result.contexts],
+            ["faithfulness", "response_relevancy"],
+        )
+    if outcome.api_error:
+        st.error(f"Judge call failed: {outcome.api_error}")
+        return
+    st.caption(score_caption(outcome.values))
+
+
 def _render_score_button(result, key: str, settings) -> None:
     if result.status != "answered":
         return
     if not _judge_available(settings):
-        st.caption(
-            "Scoring is off: no judge API key set. Add GROQ_API_KEY (or GEMINI_API_KEY "
-            "for a Gemini judge) to .env to enable it."
-        )
+        st.caption("Scoring is off: set GROQ_API_KEY in .env to enable it.")
         return
 
+    if st.session_state.get("auto_score"):
+        _score_now(result)
+        return
     if st.button("Score this answer", key=f"score-{key}"):
-        with st.spinner("Asking the judge…"):
-            outcome = get_scorer()(
-                result.question,
-                result.answer,
-                None,
-                [c.text for c in result.contexts],
-                ["faithfulness", "response_relevancy"],
-            )
-        if outcome.api_error:
-            st.error(f"Judge call failed: {outcome.api_error}")
-            return
-        left, right = st.columns(2)
-        for col, metric in ((left, "faithfulness"), (right, "response_relevancy")):
-            value = outcome.values.get(metric)
-            col.metric(METRIC_LABELS[metric], f"{value:.3f}" if value is not None else "—")
-    st.caption(
-        "Only faithfulness and response relevancy: with no reference answer, "
-        "context precision and recall cannot be computed."
-    )
+        _score_now(result)
+
+
+def split_sources(contexts, cited_pages):
+    """(chunks whose page the answer cited, the rest).
+
+    Retrieval always returns TOP_K chunks, but an answer usually leans on one or
+    two. Showing all of them under "Sources used" implies the answer used them
+    all. Retrieval is unchanged — this only affects what is shown.
+    """
+    cited = set(cited_pages or [])
+    used = [c for c in contexts if c.page in cited]
+    other = [c for c in contexts if c.page not in cited]
+    return used, other
+
+
+def _render_chunks(chunks) -> None:
+    for chunk in chunks:
+        st.markdown(f"**p. {chunk.page}** — relevance {chunk.score:.2f}")
+        st.caption(chunk.text)
 
 
 def _render_result(result) -> None:
@@ -271,10 +301,13 @@ def _render_result(result) -> None:
         st.markdown(result.answer)
     if result.cited_pages:
         st.markdown(" ".join(f"`p. {p}`" for p in result.cited_pages))
-    with st.expander("Sources used"):
-        for chunk in result.contexts:
-            st.markdown(f"**p. {chunk.page}** — relevance {chunk.score:.2f}")
-            st.caption(chunk.text)
+    used, other = split_sources(result.contexts, result.cited_pages)
+    if used:
+        with st.expander(f"Sources used ({len(used)})"):
+            _render_chunks(used)
+    if other:
+        with st.expander(f"Other retrieved chunks, not used in the answer ({len(other)})"):
+            _render_chunks(other)
     st.caption(
         f"status: {result.status} · latency: {result.latency_ms['total']} ms"
         f" · model: {result.model}"
@@ -296,10 +329,12 @@ def render_chat_tab(settings) -> None:
 
     for i, message in enumerate(st.session_state["messages"]):
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
             if message["role"] == "assistant":
+                # _render_result prints the answer; printing content too duplicated it
                 _render_result(message["result"])
                 _render_score_button(message["result"], str(i), settings)
+            else:
+                st.markdown(message["content"])
 
     question = st.chat_input("Ask about the ISTQB CTFL syllabus…")
     if not question and "pending_question" in st.session_state:
@@ -437,6 +472,12 @@ def main() -> None:
     with st.sidebar:
         st.caption(f"Model: {settings.answer_model}")
         st.caption(f"Judge: {settings.judge_model}")
+        st.toggle(
+            "Auto-score every answer",
+            key="auto_score",
+            value=False,
+            help="Each score costs about 3 judge calls.",
+        )
         for q in EXAMPLE_QUESTIONS:
             if st.button(q, key=f"example-{q}"):
                 st.session_state["pending_question"] = q
