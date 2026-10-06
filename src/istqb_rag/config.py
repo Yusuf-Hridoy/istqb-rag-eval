@@ -44,6 +44,7 @@ class Settings:
     chroma_dir: Path
     collection_name: str
     judge_model: str
+    judge_max_tokens: int
     golden_path: Path
     runs_dir: Path
 
@@ -70,6 +71,7 @@ def get_settings() -> Settings:
         chroma_dir=_path("CHROMA_DIR", ".chroma"),
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
         judge_model=_str("JUDGE_MODEL", "qwen/qwen3.8-27b"),
+        judge_max_tokens=_int("JUDGE_MAX_TOKENS", 950),
         golden_path=_path("GOLDEN_PATH", "data/golden_dataset.jsonl"),
         runs_dir=_path("RUNS_DIR", "runs"),
     )

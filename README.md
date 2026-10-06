@@ -131,31 +131,29 @@ picks up where it stopped.
 ### Baseline results (pilot, n=15)
 
 Run `pilot-1` — answer model `openai/gpt-oss-120b`, judge `qwen/qwen3.8-27b`,
-Ragas 0.4.3, `TOP_K=4`. Numbers are exactly those in
+Ragas 0.4.3, `TOP_K=4`. All 15 rows scored. Numbers are exactly those in
 `runs/pilot-1/summary.json`.
 
-| Metric | Mean | Rows scored (n) | Expected | NaN |
+| Metric | Mean | Rows scored (n) | Expected | NaN (parse / truncated) |
 |---|---|---|---|---|
-| Context precision | 0.775 | 9 | 9 | 0 |
-| Context recall | 0.840 | 9 | 9 | 0 |
-| Faithfulness | 0.830 | 7 | 8 | 1 |
-| Response relevancy | 0.867 | 8 | 8 | 0 |
+| Context precision | 0.770 | 11 | 11 | 0 / 0 |
+| Context recall | 0.778 | 11 | 11 | 0 / 0 |
+| Faithfulness | 0.841 | 8 | 10 | 0 / 2 |
+| Response relevancy | 0.869 | 10 | 10 | 0 / 0 |
 
 | | value |
 |---|---|
-| In-scope answer rate | 88.9% (8/9) |
+| In-scope answer rate | 90.9% (10/11) |
 | Out-of-scope accuracy | 50% (1/2) — see finding 2, this is a measurement artifact |
 | Not-in-syllabus accuracy | 100% (2/2) |
 | Possible hallucinations | 0 |
 | Errors | 0 |
-| Latency | median 4386 ms, p95 12021 ms |
+| Latency | median 8829 ms, p95 12021 ms |
 
-**13 of the 15 pilot rows were scored.** `q048` and `q058` are still unscored:
-Groq's free tier caps this model at 200,000 tokens/day and the run exhausted it,
-so the score stage stopped and left them for a rerun. Rerunning
-`uv run python -m istqb_rag.eval score --run-id pilot-1` once the daily budget
-resets will add them. Every in-scope number above therefore rests on **9 rows,
-not 11**.
+Two faithfulness verdicts (`q045`, `q048`) are missing because `JUDGE_MAX_TOKENS`
+truncated the judge's reply, not because the judge produced anything unreadable.
+`summary.json` counts those separately as `nan_truncated`, and they do not count
+towards the run-validity guard. There were **no** unexplained parse failures.
 
 At **pilot, n=15** most per-group means rest on one to three rows. Groups below
 three rows are reported as "n too small" in both the console report and the

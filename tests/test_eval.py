@@ -14,6 +14,7 @@ from istqb_rag.eval.step2_judge_scores import (
     ScoreOutcome,
     is_daily_quota_error,
     is_quota_error,
+    is_request_too_large,
     metrics_for,
     retry_after_seconds,
     run_score,
@@ -139,6 +140,7 @@ def _score_row(
     rr=0.8,
     row_type="in_scope",
     latency=100,
+    truncated=False,
 ):
     return {
         "id": row_id,
@@ -155,6 +157,7 @@ def _score_row(
         "response_relevancy": rr,
         "latency_ms": latency,
         "possible_hallucination": "",
+        "judge_truncated": truncated,
     }
 
 
@@ -474,3 +477,150 @@ def test_one_isolated_parse_failure_does_not_invalidate_a_small_run():
 def test_two_parse_failures_above_the_rate_still_invalidate():
     rows = [_score_row(f"q{i:03d}", f=(math.nan if i < 2 else 0.9)) for i in range(8)]
     assert [k for k, _ in failed_nan_metrics(build_summary(rows))] == ["faithfulness"]
+
+
+# --- "Request too large": a 429 that retrying can never fix ----------------
+
+GROQ_TOO_LARGE = (
+    "Error code: 429 - {'error': {'message': 'Request too large for model "
+    "`qwen/qwen3.8-27b` in organization `org_x` service tier `on_demand` on output "
+    "tokens per minute (OTPM): Limit 1000, Requested 1240. The request's expected "
+    "output tokens exceed the enforced limit; reduce max_tokens (or the request's "
+    "expected output) and try again."
+)
+
+
+def test_request_too_large_is_recognised_and_not_a_rate_limit():
+    exc = Exception(GROQ_TOO_LARGE)
+    assert is_request_too_large(exc)
+    assert is_quota_error(exc)  # it does arrive as a 429
+    assert not is_daily_quota_error(exc)  # but it is not a daily cap
+    assert not is_request_too_large(Exception(GROQ_OTPM))  # a real rate limit
+
+
+def test_too_large_row_is_skipped_without_retries(tmp_path, monkeypatch):
+    """No backoff loop: one attempt, row not saved, the run carries on."""
+    import istqb_rag.eval.step2_judge_scores as step2
+
+    slept = []
+    monkeypatch.setattr(step2.time, "sleep", lambda s: slept.append(s))
+
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001"), _row("q002")]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+
+    attempts = []
+
+    def too_large_on_q001(question, response, reference, contexts, metric_keys):
+        attempts.append(question)
+        if "q001" in question:
+            return ScoreOutcome(
+                api_error=(
+                    "judge request exceeds provider per-request limit — lower JUDGE_MAX_TOKENS"
+                )
+            )
+        return ScoreOutcome(values={k: 0.7 for k in metric_keys})
+
+    stats = run_score("test-run", rows, too_large_on_q001, settings=settings)
+
+    assert slept == []  # never backed off
+    assert stats["api_errors"] == 1
+    saved = [r["id"] for r in _read_scores(settings, "test-run")]
+    assert saved == ["q002"]  # q001 not saved, the run continued past it
+
+
+def test_retry_loop_does_not_sleep_or_retry_on_a_too_large_request(monkeypatch):
+    """The real retry policy short-circuits: one attempt, no backoff."""
+    import istqb_rag.eval.step2_judge_scores as step2
+
+    slept, calls = [], []
+    monkeypatch.setattr(step2.time, "sleep", lambda s: slept.append(s))
+
+    def run_once():
+        calls.append(1)
+        raise Exception(GROQ_TOO_LARGE)
+
+    outcome = step2.score_with_retries(run_once, lambda r: {}, step2.JudgeCallCounter())
+
+    assert len(calls) == 1  # exactly one attempt
+    assert slept == []
+    assert "lower JUDGE_MAX_TOKENS" in outcome.api_error
+    assert not outcome.quota_exhausted
+
+
+def test_retry_loop_does_back_off_on_a_real_rate_limit(monkeypatch):
+    """Contrast: a genuine per-minute limit is still retried."""
+    import istqb_rag.eval.step2_judge_scores as step2
+
+    slept, calls = [], []
+    monkeypatch.setattr(step2.time, "sleep", lambda s: slept.append(s))
+
+    def run_once():
+        calls.append(1)
+        if len(calls) == 1:
+            raise Exception(GROQ_OTPM)
+        return "result"
+
+    outcome = step2.score_with_retries(
+        run_once, lambda r: {"faithfulness": 1.0}, step2.JudgeCallCounter()
+    )
+    assert len(calls) == 2 and slept == [0.72]
+    assert outcome.values == {"faithfulness": 1.0}
+
+
+def test_judge_max_tokens_is_passed_to_the_groq_judge():
+    """The cap must reach the model, or the provider rejects the request."""
+    from istqb_rag.eval.step2_judge_scores import build_judge
+
+    settings = make_settings(judge_model="qwen/qwen3.8-27b", groq_api_key="test-key")
+    assert build_judge(settings).max_tokens == settings.judge_max_tokens
+
+
+# --- Truncated verdicts are not parse failures ----------------------------
+
+
+def test_truncated_nan_is_counted_apart_from_a_parse_failure():
+    rows = [
+        _score_row("q001", f=math.nan, truncated=True),  # cap cut it short
+        _score_row("q002", f=math.nan, truncated=False),  # unexplained
+        _score_row("q003", f=0.9),
+    ]
+    stats = build_summary(rows)["overall"]["faithfulness"]
+    assert stats["nan"] == 2
+    assert stats["nan_truncated"] == 1
+    assert stats["nan_parse_failure"] == 1
+    assert stats["scored"] == 1
+
+
+def test_truncation_alone_never_invalidates_a_run():
+    """Every verdict truncated by our own cap: diagnosed, so the run still stands."""
+    rows = [_score_row(f"q{i:03d}", f=math.nan, truncated=True) for i in range(5)]
+    rows += [_score_row("q100", f=0.9)]
+    summary = build_summary(rows)
+    assert summary["overall"]["faithfulness"]["nan_rate"] > NAN_RATE_LIMIT
+    assert summary["overall"]["faithfulness"]["parse_failure_rate"] == 0.0
+    assert failed_nan_metrics(summary) == []
+
+
+def test_unexplained_parse_failures_still_invalidate():
+    rows = [_score_row(f"q{i:03d}", f=math.nan, truncated=False) for i in range(3)]
+    rows += [_score_row(f"q1{i:02d}", f=0.9) for i in range(7)]
+    assert [k for k, _ in failed_nan_metrics(build_summary(rows))] == ["faithfulness"]
+
+
+def test_counter_flags_a_reply_the_cap_cut_short():
+    """finish_reason is how truncation is detected, not guesswork."""
+    from istqb_rag.eval.step2_judge_scores import JudgeCallCounter
+
+    class _Gen:
+        generation_info = {"finish_reason": "length"}
+        message = None
+
+    class _Resp:
+        llm_output = {"token_usage": {"prompt_tokens": 10, "completion_tokens": 950}}
+        generations = [[_Gen()]]
+
+    counter = JudgeCallCounter()
+    assert not counter.truncated
+    counter.on_llm_end(_Resp())
+    assert counter.truncated

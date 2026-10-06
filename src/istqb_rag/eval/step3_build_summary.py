@@ -42,6 +42,7 @@ def load_scores(scores_path: Path) -> list[dict]:
             row[key] = float(raw) if raw not in ("", None) else math.nan
         row["latency_ms"] = int(row["latency_ms"]) if row["latency_ms"] else 0
         row["multi_chunk"] = row["multi_chunk"] == "true"
+        row["judge_truncated"] = row.get("judge_truncated", "") == "true"
     return rows
 
 
@@ -60,13 +61,23 @@ def _metric_stats(rows: list[dict]) -> dict:
     for key in METRIC_KEYS:
         expected = [r for r in rows if _expects(r, key)]
         values = [r[key] for r in expected if not math.isnan(r[key])]
-        nan_count = sum(1 for r in expected if math.isnan(r[key]))
+        missing = [r for r in expected if math.isnan(r[key])]
+        # A verdict our own JUDGE_MAX_TOKENS cut short is a known configuration
+        # artifact with a named fix; only an unexplained unreadable verdict is a
+        # parse failure, and only those feed the validity guard.
+        truncated = [r for r in missing if r.get("judge_truncated")]
+        parse_failed = [r for r in missing if not r.get("judge_truncated")]
         stats[key] = {
             "mean": round(sum(values) / len(values), 4) if values else None,
             "scored": len(values),
             "expected": len(expected),
-            "nan": nan_count,
-            "nan_rate": round(nan_count / len(expected), 4) if expected else 0.0,
+            "nan": len(missing),
+            "nan_truncated": len(truncated),
+            "nan_parse_failure": len(parse_failed),
+            "nan_rate": round(len(missing) / len(expected), 4) if expected else 0.0,
+            "parse_failure_rate": (
+                round(len(parse_failed) / len(expected), 4) if expected else 0.0
+            ),
         }
     return stats
 
@@ -183,7 +194,12 @@ def _print_table(summary: dict) -> None:
     print("\n=== Eval summary ===")
     for key, stats in summary["overall"].items():
         mean = f"{stats['mean']:.3f}" if stats["mean"] is not None else "-"
-        print(f"{key:20s} mean={mean}  scored={stats['scored']}  NaN={stats['nan']}")
+        extra = ""
+        if stats["nan"]:
+            extra = (
+                f" (parse-fail {stats['nan_parse_failure']}, truncated {stats['nan_truncated']})"
+            )
+        print(f"{key:20s} mean={mean}  scored={stats['scored']}  NaN={stats['nan']}{extra}")
     rate = summary["in_scope_answer_rate"]
     print(
         f"in-scope answer rate: {rate['answered']}/{rate['total']}"
@@ -220,16 +236,22 @@ def _print_table(summary: dict) -> None:
 
 
 def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tuple[str, float]]:
-    """Metrics whose parse failures are both proportionally and absolutely bad.
+    """Metrics whose *parse* failures are both proportionally and absolutely bad.
 
-    Both conditions must hold: the rate is above ``limit`` *and* at least
-    ``MIN_NAN_FAILURES`` verdicts failed to parse. See MIN_NAN_FAILURES for why
-    the count matters as well as the rate.
+    Only unexplained unreadable verdicts count. A verdict our own
+    JUDGE_MAX_TOKENS cut short is a diagnosed configuration artifact, reported
+    separately as ``nan_truncated``, and does not invalidate a run.
+
+    Both conditions must hold: the parse-failure rate is above ``limit`` *and*
+    at least ``MIN_NAN_FAILURES`` verdicts failed to parse. See
+    MIN_NAN_FAILURES for why the count matters as well as the rate.
     """
     return [
-        (key, stats["nan_rate"])
+        (key, stats["parse_failure_rate"])
         for key, stats in summary["overall"].items()
-        if stats["expected"] and stats["nan_rate"] > limit and stats["nan"] >= MIN_NAN_FAILURES
+        if stats["expected"]
+        and stats["parse_failure_rate"] > limit
+        and stats["nan_parse_failure"] >= MIN_NAN_FAILURES
     ]
 
 

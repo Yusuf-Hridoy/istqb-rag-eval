@@ -53,6 +53,7 @@ SCORES_COLUMNS = [
     "response_relevancy",
     "latency_ms",
     "possible_hallucination",
+    "judge_truncated",
 ]
 
 _QUOTA_MARKERS = (
@@ -65,6 +66,13 @@ _QUOTA_MARKERS = (
 )
 # A daily cap is worth stopping for; a per-minute bucket just needs a wait.
 _DAILY_MARKERS = ("per day", "perday", "requestsperday", "daily limit")
+# One request that cannot fit the provider's per-request ceiling. Waiting
+# changes nothing — only a smaller JUDGE_MAX_TOKENS does — so never retry it.
+_TOO_LARGE_MARKERS = (
+    "request too large",
+    "reduce max_tokens",
+    "expected output tokens exceed",
+)
 # Anything the provider asks us to wait longer than this is treated as a cap
 # we cannot wait out inside one run.
 DAILY_WAIT_THRESHOLD_S = 300.0
@@ -116,6 +124,17 @@ def retry_after_seconds(exc: BaseException) -> float | None:
     return None
 
 
+def is_request_too_large(exc: BaseException) -> bool:
+    """True when one request exceeds the provider's per-request ceiling.
+
+    Groq reports this as a 429 alongside genuine rate limits, but it is not a
+    rate limit: the same request will be rejected every time, however long we
+    wait. It is fixed by lowering JUDGE_MAX_TOKENS, not by backing off.
+    """
+    text = f"{type(exc).__name__} {exc}".lower()
+    return any(marker in text for marker in _TOO_LARGE_MARKERS)
+
+
 def is_daily_quota_error(exc: BaseException) -> bool:
     """True only for a cap this run cannot wait out — not a per-minute bucket.
 
@@ -123,7 +142,7 @@ def is_daily_quota_error(exc: BaseException) -> bool:
     treating it as exhaustion would stop the run every few rows and no baseline
     would ever finish.
     """
-    if not is_quota_error(exc):
+    if not is_quota_error(exc) or is_request_too_large(exc):
         return False
     text = f"{type(exc).__name__} {exc}".lower()
     if any(marker in text for marker in _DAILY_MARKERS):
@@ -142,6 +161,7 @@ class ScoreOutcome:
     completion_tokens: int = 0
     api_error: str | None = None
     quota_exhausted: bool = False
+    truncated: bool = False
 
     @property
     def measured(self) -> bool:
@@ -166,6 +186,7 @@ class JudgeCallCounter(BaseCallbackHandler):
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.errors: list[BaseException] = []
+        self.truncated = False
 
     def reset(self) -> None:
         self.__init__()
@@ -185,6 +206,18 @@ class JudgeCallCounter(BaseCallbackHandler):
                     usage = meta.get("token_usage") or usage
         self.prompt_tokens += int(usage.get("prompt_tokens", 0) or 0)
         self.completion_tokens += int(usage.get("completion_tokens", 0) or 0)
+        # finish_reason "length" means JUDGE_MAX_TOKENS cut the verdict off. That
+        # is our configuration truncating a reply, not the judge producing
+        # unreadable output, and the two are counted apart downstream.
+        for generations in getattr(response, "generations", []) or []:
+            for gen in generations:
+                info = getattr(gen, "generation_info", None) or {}
+                meta = getattr(getattr(gen, "message", None), "response_metadata", {}) or {}
+                if (info.get("finish_reason") or meta.get("finish_reason")) in (
+                    "length",
+                    "max_tokens",
+                ):
+                    self.truncated = True
 
     def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
         self.errors.append(error)
@@ -245,6 +278,60 @@ class _FastEmbedForRagas(Embeddings):
         return self._inner.embed_query(text)
 
 
+def score_with_retries(run_once, read_scores, counter) -> ScoreOutcome:
+    """Run one row's evaluation, retrying only the errors that waiting can fix.
+
+    ``run_once`` performs a single Ragas evaluation; ``read_scores`` turns its
+    result into {metric: value}. Kept module-level and callable-driven so the
+    retry policy is testable without a judge or a network.
+    """
+    for attempt in range(1, MAX_ROW_ATTEMPTS + 1):
+        counter.reset()
+        result = None
+        error: BaseException | None = None
+        try:
+            result = run_once()
+        except Exception as exc:  # noqa: BLE001 — any judge failure is "not measured"
+            error = exc
+        else:
+            # Ragas swallows per-call failures into NaN; the callback is the
+            # only place they are still visible.
+            error = counter.errors[0] if counter.errors else None
+
+        if error is None:
+            return ScoreOutcome(
+                values=read_scores(result),
+                calls=counter.calls,
+                prompt_tokens=counter.prompt_tokens,
+                completion_tokens=counter.completion_tokens,
+                truncated=counter.truncated,
+            )
+
+        detail = f"{type(error).__name__}: {error}"[:300]
+        if is_request_too_large(error):
+            # Retrying is pointless; the request is too big by construction.
+            return ScoreOutcome(
+                calls=counter.calls,
+                api_error=(
+                    "judge request exceeds provider per-request limit — "
+                    f"lower JUDGE_MAX_TOKENS ({detail})"
+                ),
+            )
+        if is_daily_quota_error(error):
+            return ScoreOutcome(calls=counter.calls, api_error=detail, quota_exhausted=True)
+
+        if is_quota_error(error) and attempt < MAX_ROW_ATTEMPTS:
+            wait = min(retry_after_seconds(error) or 5.0 * attempt, MAX_SLEEP_S)
+            print(f"  rate limited, waiting {wait:.1f}s (attempt {attempt}/{MAX_ROW_ATTEMPTS})")
+            time.sleep(wait)
+            continue
+
+        # Out of attempts, or a non-quota failure: not a measurement.
+        return ScoreOutcome(calls=counter.calls, api_error=detail)
+
+    return ScoreOutcome(api_error="exhausted judge retries")
+
+
 def build_judge(settings: Settings):
     """The judge chat model, chosen by JUDGE_MODEL's provider prefix.
 
@@ -264,7 +351,15 @@ def build_judge(settings: Settings):
     key = settings.groq_api_key
     if not key:
         raise ValueError("GROQ_API_KEY is not set — add it to .env (see .env.example).")
-    return ChatGroq(model=settings.judge_model, temperature=0, api_key=key)
+    # Groq sizes a request from max_tokens, not from what the reply actually
+    # uses, so an uncapped judge request is rejected outright against the free
+    # tier's per-minute output budget. See DECISIONS.md.
+    return ChatGroq(
+        model=settings.judge_model,
+        temperature=0,
+        api_key=key,
+        max_tokens=settings.judge_max_tokens,
+    )
 
 
 def make_scorer(settings: Settings | None = None) -> ScorerFn:
@@ -309,52 +404,24 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
         )
         dataset = EvaluationDataset(samples=[sample])
 
-        for attempt in range(1, MAX_ROW_ATTEMPTS + 1):
-            counter.reset()
-            result = None
-            error: BaseException | None = None
-            try:
-                result = evaluate(
-                    dataset,
-                    metrics=[ragas_metrics[k] for k in metric_keys],
-                    llm=judge,
-                    embeddings=embeddings,
-                    run_config=run_config,
-                    callbacks=[counter],
-                    show_progress=False,
-                )
-            except Exception as exc:  # noqa: BLE001 — any judge failure is "not measured"
-                error = exc
-            else:
-                # Ragas swallows per-call failures into NaN; the callback is the
-                # only place they are still visible.
-                error = counter.errors[0] if counter.errors else None
+        def run_once():
+            return evaluate(
+                dataset,
+                metrics=[ragas_metrics[k] for k in metric_keys],
+                llm=judge,
+                embeddings=embeddings,
+                run_config=run_config,
+                callbacks=[counter],
+                show_progress=False,
+            )
 
-            if error is None:
-                # Ragas names the column after the metric object, which is not
-                # always our key: response_relevancy is Ragas' answer_relevancy.
-                row_scores = result.to_pandas().iloc[0]
-                return ScoreOutcome(
-                    values={k: float(row_scores[ragas_metrics[k].name]) for k in metric_keys},
-                    calls=counter.calls,
-                    prompt_tokens=counter.prompt_tokens,
-                    completion_tokens=counter.completion_tokens,
-                )
+        def read_scores(result):
+            # Ragas names the column after the metric object, which is not always
+            # our key: response_relevancy is Ragas' answer_relevancy.
+            row = result.to_pandas().iloc[0]
+            return {k: float(row[ragas_metrics[k].name]) for k in metric_keys}
 
-            detail = f"{type(error).__name__}: {error}"[:300]
-            if is_daily_quota_error(error):
-                return ScoreOutcome(calls=counter.calls, api_error=detail, quota_exhausted=True)
-
-            if is_quota_error(error) and attempt < MAX_ROW_ATTEMPTS:
-                wait = min(retry_after_seconds(error) or 5.0 * attempt, MAX_SLEEP_S)
-                print(f"  rate limited, waiting {wait:.1f}s (attempt {attempt}/{MAX_ROW_ATTEMPTS})")
-                time.sleep(wait)
-                continue
-
-            # Out of attempts, or a non-quota failure: not a measurement.
-            return ScoreOutcome(calls=counter.calls, api_error=detail)
-
-        return ScoreOutcome(api_error="exhausted judge retries")
+        return score_with_retries(run_once, read_scores, counter)
 
     return score_row
 
@@ -456,6 +523,7 @@ def run_score(
                 "best_score": f"{max((c.score for c in result.contexts), default=0.0):.4f}",
                 "latency_ms": result.latency_ms["total"],
                 "possible_hallucination": flag,
+                "judge_truncated": "true" if outcome.truncated else "",
             }
             for key in METRIC_KEYS:
                 value = outcome.values.get(key, math.nan)

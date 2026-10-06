@@ -379,3 +379,74 @@ look accidental.
 Resume was verified after the rename: `runs/pilot-1/` still reports 13 rows
 already scored and would judge only `q048` and `q058`, and the generate stage
 re-asks nothing.
+
+## JUDGE_MAX_TOKENS: why the judge needs an output cap
+
+Resuming `pilot-1` for `q048` and `q058` failed with a Groq 429 that no amount
+of retrying could clear:
+
+    Request too large ... on output tokens per minute (OTPM):
+    Limit 1000, Requested 1240. The request's expected output tokens exceed
+    the enforced limit; reduce max_tokens ...
+
+Groq sizes a request from **`max_tokens`**, not from what the reply actually
+uses. With `max_tokens` unset, langchain-groq sends the model's full default
+ceiling, so a single request was "1240 expected output tokens" against a
+1000-per-minute budget and was rejected on arrival. Waiting changes nothing —
+only a smaller cap does.
+
+Measured judge output on the resumed rows: **3700 completion tokens over 16
+calls, ~231 tokens per call**, so a cap of a few hundred is far above what a
+verdict normally needs. Capping does not change a verdict that fits under the
+cap: the judge is at temperature 0 and `max_tokens` only truncates, it does not
+steer. It is a ceiling, not a budget the model spends up to.
+
+`JUDGE_MAX_TOKENS` defaults to **950**. 800 was tried first and truncated the
+faithfulness verdict on both resumed rows (`LLMDidNotFinishException: the LLM
+generation was not completed`), which Ragas turns into NaN. At 950 `q058`
+scored normally (faithfulness 0.9167) but `q048` still truncates — repeatably,
+since the judge is deterministic. 950 is the agreed ceiling, so `q048`'s
+faithfulness stays unmeasured rather than being bought by a larger cap that the
+per-minute limit would reject anyway.
+
+The setting applies to the judge only. The answer model is untouched, so the
+13 rows scored before this change remain comparable with the 2 resumed ones on
+every metric except `q048`'s faithfulness.
+
+### "Request too large" is not a rate limit
+
+It arrives as a 429 and matches the quota markers, but it is a per-request
+ceiling: the identical request fails every time. `is_request_too_large()` now
+catches it before the backoff path, so the row is skipped immediately with
+"judge request exceeds provider per-request limit — lower JUDGE_MAX_TOKENS",
+is not saved, and the run continues. It is also excluded from
+`is_daily_quota_error()`, so it can never stop the whole stage.
+
+The per-row retry policy moved to a module-level `score_with_retries()` driven
+by callables, so this behaviour is testable without a judge or a network.
+
+### Truncated verdicts are counted apart from parse failures
+
+A NaN now has three possible causes, and conflating them cost a valid run once:
+
+| cause | saved? | counts towards the guard? |
+|---|---|---|
+| API error — the judge never answered | no, retried on rerun | n/a |
+| **Truncated** — `finish_reason: length`, our cap cut the verdict short | yes, as `nan_truncated` | **no** |
+| Parse failure — the judge answered, Ragas could not read it | yes, as `nan_parse_failure` | yes |
+
+Truncation is detected from the response's `finish_reason`, not inferred from
+the NaN, so the classification is measured rather than guessed. The guard exists
+to catch a judge producing unreadable output; a verdict *we* cut off with
+`JUDGE_MAX_TOKENS` is a diagnosed configuration artifact with a named fix, and
+reporting it as a judge failure would be wrong.
+
+This changed the pilot's reading. `q045`'s NaN had been recorded as a parse
+failure; re-scoring with the detector in place showed it was truncation all
+along, the same cause as `q048`. The run therefore has **zero** unexplained
+parse failures, and `summary.json` reports `nan_truncated: 2` on faithfulness so
+the gap is visible rather than silently averaged away.
+
+`scores.csv` gained a `judge_truncated` column, appended last so Phase 3's join
+on `id` is unaffected. Rows written before the column existed read as not
+truncated, which is correct for them.
