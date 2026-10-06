@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Tests
+        run: uv run pytest -q
+
+      # CI has no syllabus PDF and no API keys, so it cannot reproduce a score.
+      # This guards the honesty of the published results instead: that README
+      # numbers are generated from the run files, every run is complete, no
+      # committed file can hold syllabus text, and the dataset still validates.
+      - name: Results integrity
+        run: uv run python scripts/check_results_integrity.py

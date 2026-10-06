@@ -528,3 +528,71 @@ for that reason.
 The judge is a separate question. It also runs at temperature 0, and Phase 2's
 repeated identical truncation of `q048` is consistent with repeatability, but
 that was never measured either and should not be inferred from this.
+
+## Phase 4: ANSWER_FORMAT now defaults to structured
+
+The variance study (`docs/answer-variance.md`) ran four samples of each mode and
+applied a decision rule written before any of them. All three conditions were
+met — 0 format fallbacks across 4 structured runs, no scope row ever recorded as
+`answered`, and mean citation rate 1.000 against text's 0.925 — so the default
+changed from `text` to `structured`.
+
+**`runs/pilot-1` and every other text-mode run remain reproducible** by setting
+`ANSWER_FORMAT=text`. The switch still exists and nothing about the text path
+changed; only the default moved. The text-mode runs in the study are `pilot-1`,
+`pilot-1-repeat`, `text-repeat-3` and `text-repeat-4`.
+
+### What the study measured, and what it did not
+
+The honest reading is narrower than "structured answers are better":
+
+* **Structured mode stabilises the bookkeeping, not the prose.** Across 4 runs
+  its citation rate and both scope accuracies never moved at all, while text
+  mode's citation rate ranged 0.800–1.000 and out-of-scope accuracy 0.500–1.000.
+* **Neither mode produces stable text.** Only 4 of 15 rows in text mode and 3 of
+  15 in structured mode gave an identical answer across all four runs. The
+  format does not make the model deterministic; it makes the *recorded status
+  and citations* deterministic, because the model states them instead of having
+  them inferred from whatever wording it chose.
+* **`q072` is the whole of text mode's scope instability.** It flipped between
+  `answered` and `refused` across the four text runs. Reading the replies
+  locally, the two `answered` cases were genuine refusals in the model's own
+  words that simply did not match `REFUSAL_TEXT` verbatim. Structured mode had
+  no flips.
+* **Answer rate never moved** in either mode (0.909, n=11, all eight runs), so
+  the study says nothing about whether structured mode answers more questions.
+
+Faithfulness was not re-measured in any of these runs — Phase 4 made zero judge
+calls — so nothing here speaks to answer quality.
+
+### A note on the run count
+
+The brief named five new runs (`text-repeat-3`, `text-repeat-4`,
+`structured-repeat-2/3/4`) while its acceptance list said six and estimated ~90
+answer-model calls. Five new runs at 15 rows is 75 calls. The five named runs
+were made, giving the 4 + 4 samples the study design calls for.
+
+## Phase 4: what CI can and cannot guarantee
+
+GitHub Actions has no syllabus PDF and no API keys, so it cannot build the index,
+call a model, or reproduce any score. The gate therefore protects **code quality
+and the honesty of the published results**, not the numbers themselves:
+
+| check | what it prevents |
+|---|---|
+| `ruff check` / `ruff format --check` | style drift |
+| `pytest -q` | 135 offline tests — no network, no keys, no PDF |
+| README tables regenerate identically | a number typed by hand into the README |
+| every `runs/*/` has config, scores and summary | a half-written run being cited |
+| `scores.csv` columns are allowlisted | a column that could carry question, answer or syllabus text |
+| golden dataset validates, reviewed rows name a reviewer | silent provenance loss |
+
+The README-table check is the load-bearing one. Each table lives between
+`<!-- results:<name>:start -->` markers, `eval readme-tables` regenerates them
+from the run files, and the check rebuilds them in memory and fails if the file
+differs. Editing `0.778` to `0.999` in the README now fails the build; there is
+a test that asserts exactly that.
+
+The allowlist is taken from `SCORES_COLUMNS`, so adding a column to the scorer
+automatically permits it — the check guards against *unknown* columns appearing
+in a committed file, not against the schema evolving deliberately.

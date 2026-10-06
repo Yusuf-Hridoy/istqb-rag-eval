@@ -8,6 +8,8 @@ uv run python -m istqb_rag.eval measure  --run-id baseline   # cost of one row
 uv run python -m istqb_rag.eval quick    --run-id exp2       # generate + judge-free report
 uv run python -m istqb_rag.eval compare  --base pilot-1 --new exp1
 uv run python -m istqb_rag.eval labelsheet --run-id pilot-1  # human labelling sheet
+uv run python -m istqb_rag.eval variance --text <ids> --structured <ids>
+uv run python -m istqb_rag.eval readme-tables                 # regenerate README results
 """
 
 import argparse
@@ -134,6 +136,49 @@ def _quick(args) -> None:
     print(f"format fallbacks: {summary['format_fallbacks']}")
 
 
+def _variance(args) -> None:
+    """Measure answer-side spread across repeated runs. No judge calls."""
+    import json as _json
+    from pathlib import Path
+
+    from istqb_rag.config import get_settings
+    from istqb_rag.eval.answer_variance import (
+        apply_decision_rule,
+        load_run,
+        mode_summary,
+        render_markdown,
+        write_results,
+    )
+
+    settings = get_settings()
+    text = mode_summary([load_run(settings.runs_dir / r) for r in args.text])
+    structured = mode_summary([load_run(settings.runs_dir / r) for r in args.structured])
+    decision = apply_decision_rule(text, structured)
+
+    notes = {}
+    if args.notes:
+        notes = {k: v for k, v in _json.loads(Path(args.notes).read_text()).items()}
+
+    doc = settings.golden_path.parent.parent / "docs" / "answer-variance.md"
+    write_results(doc, render_markdown(text, structured, decision, notes))
+
+    print("=== Decision rule ===")
+    for cond in decision["conditions"]:
+        print(
+            f"  ({cond['id']}) {'MET    ' if cond['met'] else 'NOT MET'} "
+            f"{cond['text']} — {cond['evidence']}"
+        )
+    print(f"\n  => ANSWER_FORMAT default: {decision['default']}")
+    if decision["failed"]:
+        print(f"  => failed condition(s): {', '.join(decision['failed'])}")
+    for name, mode in (("text", text), ("structured", structured)):
+        flips = mode["status_flips"]
+        print(f"\n{name}: citation rate {mode['rates']['citation_rate']}")
+        print(f"{name}: status flips -> {flips or 'none'}")
+        print(f"{name}: identical answers on {mode['identical_rows']}/{mode['measured_rows']} rows")
+    print(f"\nwrote {doc}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="istqb_rag.eval")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -152,12 +197,37 @@ def main() -> None:
         )
         p.add_argument("--limit", type=int, default=None, help="only use the first N rows")
 
+    sub.add_parser("readme-tables")
+
+    variance_parser = sub.add_parser("variance")
+    variance_parser.add_argument("--text", nargs="+", required=True, help="text-mode run ids")
+    variance_parser.add_argument(
+        "--structured", nargs="+", required=True, help="structured-mode run ids"
+    )
+    variance_parser.add_argument(
+        "--notes", default=None, help="JSON file: {row_id: reading} for scope rows answered"
+    )
+
     compare_parser = sub.add_parser("compare")
     compare_parser.add_argument("--base", required=True)
     compare_parser.add_argument("--new", required=True)
     args = parser.parse_args()
 
     try:
+        if args.command == "readme-tables":
+            from pathlib import Path as _Path
+
+            from istqb_rag.eval.readme_tables import write_readme_tables
+
+            readme = _Path(__file__).resolve().parents[3] / "README.md"
+            changed = write_readme_tables(readme)
+            print(f"{'updated' if changed else 'already up to date'}: {readme}")
+            return
+
+        if args.command == "variance":
+            _variance(args)
+            return
+
         if args.command == "compare":
             from istqb_rag.config import get_settings
             from istqb_rag.eval.compare_runs import reference_pages_from_golden, run_compare

@@ -1,0 +1,719 @@
+{
+  "overall": {
+    "context_precision": {
+      "mean": null,
+      "scored": 0,
+      "expected": 0,
+      "nan": 0,
+      "nan_truncated": 0,
+      "nan_parse_failure": 0,
+      "nan_rate": 0.0,
+      "parse_failure_rate": 0.0,
+      "unmeasured": true
+    },
+    "context_recall": {
+      "mean": null,
+      "scored": 0,
+      "expected": 0,
+      "nan": 0,
+      "nan_truncated": 0,
+      "nan_parse_failure": 0,
+      "nan_rate": 0.0,
+      "parse_failure_rate": 0.0,
+      "unmeasured": true
+    },
+    "faithfulness": {
+      "mean": null,
+      "scored": 0,
+      "expected": 0,
+      "nan": 0,
+      "nan_truncated": 0,
+      "nan_parse_failure": 0,
+      "nan_rate": 0.0,
+      "parse_failure_rate": 0.0,
+      "unmeasured": true
+    },
+    "response_relevancy": {
+      "mean": null,
+      "scored": 0,
+      "expected": 0,
+      "nan": 0,
+      "nan_truncated": 0,
+      "nan_parse_failure": 0,
+      "nan_rate": 0.0,
+      "parse_failure_rate": 0.0,
+      "unmeasured": true
+    }
+  },
+  "by_chapter": {
+    "1": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 2,
+      "n_too_small": true
+    },
+    "2": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 2,
+      "n_too_small": true
+    },
+    "3": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 1,
+      "n_too_small": true
+    },
+    "4": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 3,
+      "n_too_small": false
+    },
+    "5": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 2,
+      "n_too_small": true
+    },
+    "6": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 1,
+      "n_too_small": true
+    }
+  },
+  "by_k_level": {
+    "K1": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 4,
+      "n_too_small": false
+    },
+    "K2": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 5,
+      "n_too_small": false
+    },
+    "K3": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 2,
+      "n_too_small": true
+    }
+  },
+  "by_multi_chunk": {
+    "False": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 6,
+      "n_too_small": false
+    },
+    "True": {
+      "context_precision": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "context_recall": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "faithfulness": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "response_relevancy": {
+        "mean": null,
+        "scored": 0,
+        "expected": 0,
+        "nan": 0,
+        "nan_truncated": 0,
+        "nan_parse_failure": 0,
+        "nan_rate": 0.0,
+        "parse_failure_rate": 0.0,
+        "unmeasured": true
+      },
+      "n": 5,
+      "n_too_small": false
+    }
+  },
+  "in_scope_answer_rate": {
+    "rate": 0.9091,
+    "answered": 10,
+    "total": 11,
+    "not_answered_ids": [
+      "q007"
+    ]
+  },
+  "scope_handling": {
+    "out_of_scope_accuracy": 1.0,
+    "out_of_scope_total": 2,
+    "not_in_syllabus_accuracy": 1.0,
+    "not_in_syllabus_total": 2,
+    "possible_hallucination_ids": []
+  },
+  "errors": {
+    "count": 0,
+    "ids": [],
+    "error_rate": 0.0,
+    "error_rate_ok": true
+  },
+  "worst_10": [
+    {
+      "id": "q001",
+      "chapter": "1",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q007",
+      "chapter": "1",
+      "k_level": "K2",
+      "status": "no_context",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q011",
+      "chapter": "2",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q013",
+      "chapter": "2",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q020",
+      "chapter": "3",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q025",
+      "chapter": "4",
+      "k_level": "K2",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q027",
+      "chapter": "4",
+      "k_level": "K3",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q030",
+      "chapter": "4",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q045",
+      "chapter": "5",
+      "k_level": "K3",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    },
+    {
+      "id": "q048",
+      "chapter": "5",
+      "k_level": "K1",
+      "status": "answered",
+      "avg": Infinity,
+      "context_precision": null,
+      "context_recall": null,
+      "faithfulness": null,
+      "response_relevancy": null
+    }
+  ],
+  "latency_ms": {
+    "median": 8348,
+    "p95": 10585.0
+  }
+}

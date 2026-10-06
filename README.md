@@ -1,228 +1,258 @@
 # istqb-rag-eval
 
-A retrieval-augmented assistant that answers questions **only** from the ISTQB
-Certified Tester Foundation Level (CTFL) v4.0 syllabus — with page citations,
-an off-topic refusal, and a relevance floor. It is deliberately a plain,
-textbook LangChain RAG pipeline, because the point of the project is what comes
-next: evaluating this exact pipeline with [Ragas](https://ragas.io/).
+[![CI](https://github.com/Yusuf-Hridoy/istqb-rag-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/Yusuf-Hridoy/istqb-rag-eval/actions/workflows/ci.yml)
+
+An ISTQB-syllabus RAG assistant, built to be evaluated with Ragas and tested
+like software.
+
+## Key findings
+
+- **`temperature=0` did not make answers repeat.** Two runs of an identical
+  configuration retrieved the same chunks on **15 of 15** rows but produced
+  **11 of 15** different answers. Over four runs per mode, only **4 of 15**
+  rows (text) and **3 of 15** (structured) gave the same answer every time.
+  Every answer-side number in this project is one sample, not a constant.
+  → [answer-variance.md](docs/answer-variance.md)
+- **A predicted improvement made things worse.** Section-aware chunking was
+  predicted to raise retrieval on multi-chunk rows. Page hit rate fell
+  **1.000 → 0.818 (n=11)** and context recall **0.778 → 0.667 (n=11)**. The
+  question it was built for, q007, did not change at all.
+  → [phase-3-findings.md](docs/phase-3-findings.md)
+- **An apparent win was not credited.** Structured answers lifted citation rate
+  0.800 → 1.000 and out-of-scope accuracy 0.500 → 1.000 — but re-running the
+  **unchanged** baseline reproduced both. The gain was run-to-run variation, so
+  the format was not credited for it.
+  → [phase-3-findings.md §3a](docs/phase-3-findings.md)
+- **A pre-registered rule then settled it on different grounds.** Across 4 runs
+  each, structured mode never recorded a scope row as answered and never flipped
+  a status, while text mode's out-of-scope accuracy ranged **0.500–1.000**. All
+  three conditions of the rule were met, so `ANSWER_FORMAT` now defaults to
+  `structured` — for stability of the *recorded* status and citations, not
+  because the prose improved.
+  → [answer-variance.md](docs/answer-variance.md)
+
+## Screenshots
+
+![Chat tab](docs/images/chat-tab.png)
+
+![Compare runs tab](docs/images/compare-tab.png)
 
 ## How it works
 
-- The syllabus PDF is loaded with PyMuPDF, boilerplate header/footer lines are
-  stripped, and the content is split into chunks (page metadata preserved).
-- Chunks are embedded with `BAAI/bge-small-en-v1.5` (FastEmbed, no PyTorch) and
-  stored in a local Chroma collection (cosine distance).
-- `answer(question)` is the single entry point: retrieve the top-k chunks,
-  refuse to call the LLM if the best relevance score is below the floor,
-  otherwise generate one grounded answer with Groq (`openai/gpt-oss-120b`,
-  temperature 0) that cites pages like `[p. 42]`.
-- Single-turn only: no chat history is ever passed to the LLM, so results are
-  reproducible for evaluation.
+```mermaid
+flowchart LR
+  subgraph bot["Bot"]
+    direction LR
+    A[Syllabus PDF] --> B[Chunks] --> C[(Chroma)] --> D[Retrieve] --> E[Answer]
+  end
+  subgraph eval["Evaluation"]
+    direction LR
+    F[Golden dataset] --> G[step 1: ask] --> H[step 2: judge] --> I[step 3: summary] --> J[compare runs]
+  end
+  E -.answers.-> G
+  C -.retrieved chunks.-> H
+```
+
+The bot retrieves the top `TOP_K` chunks for a question, refuses if nothing
+clears a relevance floor, and otherwise answers from those chunks with page
+citations. The evaluation runs the same `answer()` over a golden dataset in
+three separable steps — ask, judge, summarise — so answers are generated once
+and can be re-scored without re-asking, and any two runs can be compared row by
+row on their question ids.
+
+## Results
+
+Every table below is **generated from the run files** by
+`uv run python -m istqb_rag.eval readme-tables`, and CI fails if the README
+differs from what the run files produce.
+
+### Baseline
+
+<!-- results:baseline:start -->
+Run `pilot-1` — 15 rows, judged by `qwen/qwen3.8-27b`.
+
+| Metric | Mean | Rows scored (n) | NaN (parse / truncated) |
+|---|---|---|---|
+| Context precision | 0.770 | 11 | 0 / 0 |
+| Context recall | 0.778 | 11 | 0 / 0 |
+| Faithfulness | 0.841 | 8 | 0 / 2 |
+| Response relevancy | 0.869 | 10 | 0 / 0 |
+
+In-scope answer rate 0.909 (10/11) · errors 0 · latency median 8829 ms, p95 12021 ms.
+<!-- results:baseline:end -->
+
+### Experiments
+
+<!-- results:experiments:start -->
+| metric | baseline<br>`pilot-1` | control, same config<br>`pilot-1-repeat` | section chunking<br>`exp1-section-chunking` | structured answers<br>`exp2-structured-answers` |
+|---|---|---|---|---|
+| Context recall | 0.778 (n=11) | not re-judged | 0.667 (n=11) | not re-judged |
+| Page hit rate | 1.000 (n=11) | 1.000 (n=11) | 0.818 (n=11) | 1.000 (n=11) |
+| Citation rate | 0.800 (n=10) | 1.000 (n=10) | 1.000 (n=10) | 1.000 (n=10) |
+| Citation validity | 1.000 (n=8) | 1.000 (n=10) | 1.000 (n=10) | 1.000 (n=10) |
+| Out-of-scope accuracy | 0.500 (n=2) | 1.000 (n=2) | 1.000 (n=2) | 1.000 (n=2) |
+<!-- results:experiments:end -->
+
+### Answer variance
+
+<!-- results:variance:start -->
+Mean across 4 runs of each mode, with (min–max).
+
+| metric | text (4 runs) | structured (4 runs) |
+|---|---|---|
+| Citation rate | 0.925 (0.800–1.000) | 1.000 (1.000–1.000) |
+| Out-of-scope accuracy | 0.750 (0.500–1.000) | 1.000 (1.000–1.000) |
+| Not-in-syllabus accuracy | 1.000 (1.000–1.000) | 1.000 (1.000–1.000) |
+| Answer rate | 0.909 (0.909–0.909) | 0.909 (0.909–0.909) |
+| Format fallbacks (total) | 0 | 0 |
+| Rows with an identical answer every run | 4 of 15 | 3 of 15 |
+
+Status flips across runs — text: `q072`; structured: none.
+
+Decision rule (written before the runs): **default = `structured`**.
+<!-- results:variance:end -->
+
+## The experiments
+
+**Baseline (`pilot-1`, n=15).** 15 reviewed rows from a 75-row golden dataset,
+judged by a different model family from the one that answers. It established the
+numbers everything else is compared against, and surfaced the failures the
+experiments then targeted. → [phase-2-findings.md](docs/phase-2-findings.md)
+
+**Experiment 1 — section-aware chunking.** Predicted: context recall on
+multi-chunk rows rises and q007 becomes answered; risk noted in advance that
+longer chunks reach fewer pages. What happened: recall fell on both groups, page
+hit rate fell, and q007 was unchanged. Retrieval *did* find the right section —
+its top hit became the Testing Principles chunk — but that section is longer
+than `CHUNK_SIZE` and gets split anyway, so the retrieved piece still held one
+principle. The stated risk is what materialised. Not adopted.
+
+**Experiment 2 — structured answers.** Predicted: out-of-scope accuracy rises
+and citation rate reaches 100%. Both numbers were met, and both were then
+reproduced by a control run with no change at all, so they are not evidence
+about the format. What does hold is mechanistic: the model states its own status
+instead of having it inferred by matching its prose against two fixed sentences,
+so a refusal phrased in the model's own words can no longer be filed as an
+answer.
+
+**The control run (`pilot-1-repeat`).** The baseline configuration re-run
+unchanged. It exists because Experiment 1 — which never touched the answer
+format — also reached citation rate 1.000, which made Experiment 2's gains
+suspect. It reproduced them, and in doing so exposed that the answer model is
+not deterministic at `temperature=0`.
+
+**The variance study.** Four runs of each answer format, with the decision rule
+written before any of them and applied as written. It measured the spread the
+control run implied: text mode's citation rate ranges 0.800–1.000 and its
+out-of-scope accuracy 0.500–1.000, driven entirely by one row (`q072`) flipping
+between `answered` and `refused`. Structured mode never moved on either.
+
+## Limitations
+
+- **The pilot is n=15.** Per-chapter and per-K-level means rest on one to three
+  rows each and are reported as "n too small" rather than discussed.
+- **The dataset is LLM-drafted and LLM-verified**, not human-verified. Each of
+  the 15 pilot rows was checked against its syllabus pages by the model, and
+  carries `reviewed_by: llm`. → [dataset-review.md](docs/dataset-review.md)
+- **Human calibration was not performed.** `data/human_labels.csv` was never
+  filled in, so judge-vs-human agreement, Cohen's kappa and the confusion matrix
+  are not computed, and one row (`q027`) has no failure type assigned. The code
+  and its tests are in place, unused.
+- **One judge model, free tier, with an output cap.** `JUDGE_MAX_TOKENS=950`
+  keeps requests under a 1000-output-tokens-per-minute ceiling; two faithfulness
+  verdicts were lost to truncation and are reported separately from parse
+  failures rather than averaged away.
+- **Judge variance was not measured.** The judge runs at temperature 0 and
+  repeated one truncation identically, which is suggestive but not a measurement.
+- **The answer model is not deterministic at `temperature=0`** (see Key
+  findings), so single-run answer-side comparisons carry unknown noise.
 
 ## Setup
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
-
-1. **Download the syllabus yourself** (it is never downloaded automatically and
-   never committed): get the ISTQB CTFL v4.0 syllabus PDF from
-   [istqb.org](https://www.istqb.org/certifications/certified-tester-foundation-level)
-   and save it as `data/raw/ctfl_syllabus_v4.pdf`.
-
-2. Install dependencies and create your local config:
-
-   ```bash
-   uv sync
-   cp .env.example .env
-   # put your Groq API key in .env (free at https://console.groq.com/keys)
-   ```
-
-3. Ingest the syllabus into the local vector store (re-running rebuilds it):
-
-   ```bash
-   uv run python -m istqb_rag.ingest
-   ```
-
-4. Ask a question from the terminal:
-
-   ```bash
-   uv run python -m istqb_rag.cli "What is equivalence partitioning?"
-   uv run python -m istqb_rag.cli "What is equivalence partitioning?" --json
-   ```
-
-5. Or launch the chat UI:
-
-   ```bash
-   uv run streamlit run app/streamlit_app.py
-   ```
-
-## Tests and lint
-
-Everything runs offline — no API keys, no PDF, no network:
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.13.
 
 ```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
+uv sync
+cp .env.example .env          # then add GROQ_API_KEY
 ```
+
+The syllabus PDF is never downloaded automatically. Download the ISTQB CTFL v4.0
+syllabus and save it as `data/raw/ctfl_syllabus_v4.pdf`.
+
+```bash
+uv run python -m istqb_rag.ingest                 # build the vector store
+uv run python -m istqb_rag.cli "What is testing?" # ask one question
+uv run streamlit run app/streamlit_app.py         # chat + eval dashboard
+```
+
+### Running the evaluation
+
+```bash
+uv run python -m istqb_rag.eval all   --run-id my-run      # ask, judge, summarise
+uv run python -m istqb_rag.eval quick --run-id my-run      # judge-free metrics only
+uv run python -m istqb_rag.eval compare --base pilot-1 --new my-run
+uv run python -m istqb_rag.eval readme-tables              # regenerate the tables above
+```
+
+Both stages resume: rerun the same command after a crash or a rate limit and it
+picks up where it stopped.
+
+### Tests and lint
+
+```bash
+uv run pytest -q
+uv run ruff check . && uv run ruff format --check .
+uv run python scripts/check_results_integrity.py
+```
+
+All tests are offline — no API keys, no network, no PDF. CI has neither the
+syllabus nor any API key, so it cannot build the index or reproduce a score;
+the gate protects **code quality and the honesty of the published results**, not
+the scores themselves.
 
 ## Project map
 
 | Path | What it is for |
 |---|---|
-| `src/istqb_rag/config.py` | Reads settings from `.env` (models, chunk size, `TOP_K`, paths). |
-| `src/istqb_rag/ingest.py` | Turns the syllabus PDF into chunks and loads them into the Chroma store. |
-| `src/istqb_rag/pipeline.py` | The RAG pipeline itself: `answer(question)` retrieves, generates and cites. |
+| `src/istqb_rag/config.py` | Reads settings from `.env` (models, chunk size, `TOP_K`, paths, the two experiment switches). |
+| `src/istqb_rag/ingest.py` | Turns the syllabus PDF into chunks and loads them into Chroma. `--chunking page\|section`. |
+| `src/istqb_rag/pipeline.py` | The RAG pipeline: `answer(question)` retrieves, generates and cites. |
 | `src/istqb_rag/prompts.py` | Every prompt and fixed reply, kept in one place. |
 | `src/istqb_rag/result_types.py` | The result objects passed around: `RetrievedChunk` and `RagResult`. |
+| `src/istqb_rag/structured_answer.py` | Parses the model's JSON reply in structured mode, and falls back safely. |
 | `src/istqb_rag/cli.py` | Ask one question from the terminal. |
 | `src/istqb_rag/eval/dataset.py` | Loads and validates the golden dataset, and checks its mix. |
-| `src/istqb_rag/eval/step1_ask_questions.py` | Eval step 1 — ask every dataset question, save the answers. |
-| `src/istqb_rag/eval/step2_judge_scores.py` | Eval step 2 — the judge scores those saved answers. |
-| `src/istqb_rag/eval/step3_build_summary.py` | Eval step 3 — add the scores up into `summary.json` and a console table. |
-| `src/istqb_rag/eval/__main__.py` | The `generate` / `score` / `report` / `all` / `measure` commands. Keeps this name because `python -m istqb_rag.eval` requires it. |
-| `app/streamlit_app.py` | The web UI: chat tab plus the eval dashboard. |
-| `data/golden_dataset.jsonl` | The 75 evaluation questions with their reference answers. |
-| `data/raw/`, `data/processed/` | The syllabus PDF and extracted page text. Both gitignored — syllabus text is never committed. |
-| `runs/pilot-1/` | The real pilot baseline run (n=15). |
-| `runs/example-fake-data/` | Invented numbers so the dashboard renders on a fresh clone. Not a measurement. |
-| `runs/<id>/config.json` | What the run used: models, `TOP_K`, chunk size, dataset checksum. |
-| `runs/<id>/scores.csv` | One line per question: ids, status and scores. No question, answer or syllabus text. |
-| `runs/<id>/summary.json` | The aggregated results the README table and dashboard read. |
+| `src/istqb_rag/eval/step1_ask_questions.py` | Ask every dataset question, save the answers. |
+| `src/istqb_rag/eval/step2_judge_scores.py` | The judge scores those saved answers. |
+| `src/istqb_rag/eval/step3_build_summary.py` | Adds the scores up into `summary.json` and a console table. |
+| `src/istqb_rag/eval/deterministic_metrics.py` | Citation rate, citation validity, page hit rate, Cohen's kappa — no judge. |
+| `src/istqb_rag/eval/compare_runs.py` | Joins two runs on question id and reports every difference. |
+| `src/istqb_rag/eval/answer_variance.py` | Spread, status flips and answer stability across repeated runs. |
+| `src/istqb_rag/eval/readme_tables.py` | Generates this README's results tables from the run files. |
+| `src/istqb_rag/eval/human_labeling_sheet.py` | Builds the human reading sheet and the empty labels file. |
+| `src/istqb_rag/eval/__main__.py` | The eval commands. Keeps this name because `python -m` requires it. |
+| `app/streamlit_app.py` | Chat tab, eval dashboard, and run comparison. |
+| `data/golden_dataset.jsonl` | The 75 evaluation questions with reference answers. |
+| `data/human_labels.csv` | Human faithfulness labels (ids only, no syllabus text). |
+| `data/raw/`, `data/processed/` | Syllabus PDF and extracted page text. Gitignored — syllabus text is never committed. |
+| `runs/<id>/config.json` | What the run used: models, `TOP_K`, chunk size, which metrics were judged. |
+| `runs/<id>/scores.csv` | One line per question: ids, status, scores. No question, answer or syllabus text. |
+| `runs/<id>/summary.json` | The aggregated results the README tables and dashboard read. |
 | `runs/<id>/answers.jsonl` | Full answers including syllabus text. Gitignored, never committed. |
-| `docs/dataset-review.md` | The per-row record of checking the pilot questions against the syllabus. |
-| `docs/phase-2-findings.md` | What the pilot baseline showed, with the numbers behind each finding. |
+| `runs/example-fake-data/` | Invented numbers so the dashboard renders on a fresh clone. Not a measurement. |
+| `scripts/check_results_integrity.py` | The CI gate on published results. |
+| `docs/` | Findings, the dataset review, the failure taxonomy and the variance study. |
 | `DECISIONS.md` | Why things are the way they are, including what was measured rather than assumed. |
 | `tests/conftest.py` | Shared fakes for the offline tests. Keeps this name because pytest requires it. |
-| `scripts/smoke_test_phase_1.py` | The Phase 1 manual smoke test. |
 
-`conftest.py` and `__main__.py` keep their names because pytest and Python
-respectively require them; everything else is named for what it does.
+## Next steps
 
-## Evaluation
-
-Phase 2 measures the Phase 1 pipeline exactly as it is — no prompt, chunking or
-retrieval settings were changed.
-
-**What is measured.** Each golden row is routed to the metrics that can mean
-something for it. In-scope rows get context precision and context recall
-(retrieval is scored even when the bot declined to answer, because that is
-where retrieval failures show up). In-scope rows that *were* answered also get
-faithfulness and response relevancy. Out-of-scope and not-in-syllabus rows get
-no judge at all: they are correct if the bot refused or found no context, and a
-not-in-syllabus row that was answered is flagged as a possible hallucination.
-
-**Golden dataset:** LLM-drafted and LLM-verified against the syllabus pages
-(see [docs/dataset-review.md](docs/dataset-review.md)); rows a human has checked
-are marked `reviewed_by: human`. `data/golden_dataset.jsonl` holds 75 rows; the first
-baseline runs on the 15 marked `"pilot": true`. The run refuses to start with
-fewer than `MIN_REVIEWED_ROWS` reviewed rows.
-
-**Running it:**
-
-```bash
-uv run python -m istqb_rag.eval all      --run-id pilot-1   # generate, score, report
-uv run python -m istqb_rag.eval measure  --run-id pilot-1   # judge cost for one row
-```
-
-The stages are separate so answers are generated once and can be re-scored
-later. Both resume: rerun the same command after a crash or a rate limit and it
-picks up where it stopped.
-
-### Baseline results (pilot, n=15)
-
-Run `pilot-1` — answer model `openai/gpt-oss-120b`, judge `qwen/qwen3.8-27b`,
-Ragas 0.4.3, `TOP_K=4`. All 15 rows scored. Numbers are exactly those in
-`runs/pilot-1/summary.json`.
-
-| Metric | Mean | Rows scored (n) | Expected | NaN (parse / truncated) |
-|---|---|---|---|---|
-| Context precision | 0.770 | 11 | 11 | 0 / 0 |
-| Context recall | 0.778 | 11 | 11 | 0 / 0 |
-| Faithfulness | 0.841 | 8 | 10 | 0 / 2 |
-| Response relevancy | 0.869 | 10 | 10 | 0 / 0 |
-
-| | value |
-|---|---|
-| In-scope answer rate | 90.9% (10/11) |
-| Out-of-scope accuracy | 50% (1/2) — see finding 2, this is a measurement artifact |
-| Not-in-syllabus accuracy | 100% (2/2) |
-| Possible hallucinations | 0 |
-| Errors | 0 |
-| Latency | median 8829 ms, p95 12021 ms |
-
-Two faithfulness verdicts (`q045`, `q048`) are missing because `JUDGE_MAX_TOKENS`
-truncated the judge's reply, not because the judge produced anything unreadable.
-`summary.json` counts those separately as `nan_truncated`, and they do not count
-towards the run-validity guard. There were **no** unexplained parse failures.
-
-At **pilot, n=15** most per-group means rest on one to three rows. Groups below
-three rows are reported as "n too small" in both the console report and the
-dashboard, and are left out of the dashboard charts. Read the pilot as a check
-that the pipeline and the judge work end to end, not as evidence about a given
-chapter or K-level.
-
-Findings: `docs/phase-2-findings.md` (written after the pilot run).
-
-## Experiments
-
-Phase 3 ran two controlled experiments against the `pilot-1` baseline, one
-variable each. Full numbers and the predictions written before either run:
-[docs/phase-3-findings.md](docs/phase-3-findings.md); per-row failure types:
-[docs/failure-taxonomy.md](docs/failure-taxonomy.md).
-
-| | pilot-1 | pilot-1-repeat (control) | exp1 section chunking | exp2 structured answers |
-|---|---|---|---|---|
-| Context recall (n=11) | 0.778 | not re-judged | **0.667** | not re-judged |
-| Context recall, multi_chunk (n=5) | 0.578 | not re-judged | **0.400** | not re-judged |
-| Page hit rate (n=11) | 1.000 | 1.000 | **0.818** | 1.000 |
-| Citation rate (n=10 answered) | 0.800 | 1.000 | 1.000 | 1.000 |
-| Citation validity | 1.000 (n=8) | 1.000 (n=10) | 1.000 (n=10) | 1.000 (n=10) |
-| Out-of-scope accuracy (n=2) | 0.500 | 1.000 | 1.000 | 1.000 |
-| In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 | 0.909 |
-
-`pilot-1-repeat` is the **pilot-1 configuration re-run unchanged**. It is in the
-table because it reproduces both of exp2's apparent gains without any change to
-the system.
-
-**Section chunking made retrieval worse** and did not fix q007, the
-seven-principles row it was built for. Retrieval is deterministic across runs,
-so that comparison holds.
-
-**Structured answers cannot be credited with the rate gains.** The control run
-reaches the same citation rate and out-of-scope accuracy with no change at all,
-so the difference from pilot-1 is run-to-run variation. The reason it varies:
-the answer model is **not reproducible at `temperature=0`** — between two
-identical runs, retrieval matched on 15 of 15 rows but **11 of 15 answers
-differed**. Every answer-side single-run comparison in this project inherits
-that uncertainty.
-
-What structured mode does change is mechanism rather than rate: the model
-reports its own status, so a correct refusal phrased in its own words can no
-longer be recorded as `answered` (0 format fallbacks in 15 rows, citation
-validity 1.000). That is a design argument for adopting it, not a measured
-improvement.
-
-Judge calls for the whole phase: **11**, all in exp1 (context recall only).
-Experiment 2, the control run, and every rate above are deterministic.
-
-Both are still **pilot, n=15**. Per-group figures rest on two to six rows, and
-exp2's answers were never re-judged, so its effect on faithfulness is unmeasured
-rather than unchanged.
-
-## Roadmap
-
-- **Phase 1:** ingest + single-turn RAG pipeline with citations
-  and refusal, CLI and Streamlit chat.
-- **Phase 2 (this phase):** golden dataset + Ragas evaluation runner scored
-  against `answer()`, with an eval dashboard tab. First baseline is a 15-row
-  pilot; the remaining 60 rows are kept for later runs.
-- **Phase 3 (this phase):** two controlled experiments, deterministic metrics,
-  judge calibration and a failure taxonomy.
-- **Phase 4:** judge-model evaluation and final report.
-
-## Notes
-
-- `data/raw/`, `data/processed/` and `.chroma/` are gitignored; the PDF and the
-  vector store are never committed.
-- All model names, thresholds and sizes live in `.env` (see `.env.example`).
-- Design choices and defaults are recorded in [DECISIONS.md](DECISIONS.md).
+- **Human calibration** — fill `data/human_labels.csv` and compute judge-vs-human
+  agreement, which also settles `q027`'s failure type.
+- **A longer-context embedding model**, so a whole syllabus section can be
+  embedded without being split. `bge-small-en-v1.5` has a 512-token window,
+  which is why whole-section chunking was not attempted.
+- **A judge variance run** — re-score the same saved answers several times.
+  `answers.jsonl` is kept, so this costs no answer-model calls.
+- **Expand from 15 to 60 reviewed rows**, so per-chapter and per-K-level
+  breakdowns stop being too thin to read.

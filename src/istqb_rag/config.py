@@ -76,7 +76,7 @@ def get_settings() -> Settings:
         judge_max_tokens=_int("JUDGE_MAX_TOKENS", 950),
         # Phase 3 switches. Both defaults reproduce the Phase 2 baseline exactly.
         chunking=_str("CHUNKING", "page"),
-        answer_format=_str("ANSWER_FORMAT", "text"),
+        answer_format=_str("ANSWER_FORMAT", "structured"),
         golden_path=_path("GOLDEN_PATH", "data/golden_dataset.jsonl"),
         runs_dir=_path("RUNS_DIR", "runs"),
     )

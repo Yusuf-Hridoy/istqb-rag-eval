@@ -23,11 +23,23 @@ from tests.conftest import make_settings
 # --- Defaults must reproduce Phase 2 ---------------------------------------
 
 
-def test_defaults_reproduce_phase_2():
+def test_page_chunking_is_still_the_default():
+    """Chunking was not changed by Phase 4: section mode lost its experiment."""
+    from istqb_rag.config import _str
+
+    assert _str("CHUNKING", "page") in ("page", "section")
     settings = make_settings()
     assert settings.chunking == "page"
-    assert settings.answer_format == "text"
     assert active_collection(settings) == settings.collection_name
+
+
+def test_text_mode_still_reproduces_the_pilot_1_baseline():
+    """The default moved to structured in Phase 4; text must stay available."""
+    import dataclasses
+
+    text_mode = dataclasses.replace(make_settings(), answer_format="text")
+    assert text_mode.answer_format == "text"
+    assert active_collection(text_mode) == text_mode.collection_name
 
 
 def test_section_mode_uses_its_own_collection():
@@ -439,3 +451,120 @@ def test_measured_none_keeps_the_old_behaviour():
     summary = build_summary(rows)
     assert summary["overall"]["context_recall"]["unmeasured"] is False
     assert summary["overall"]["faithfulness"]["expected"] == 1  # still expected, still missing
+
+
+# --- Answer variance study --------------------------------------------------
+
+
+def _sample(run_id, statuses, hashes, fallbacks=0, cited=None):
+    from istqb_rag.eval.answer_variance import RunSample
+
+    rows = []
+    for row_id, (row_type, status) in statuses.items():
+        rows.append(
+            {
+                "id": row_id,
+                "type": row_type,
+                "status": status,
+                "cited_pages": (cited or {}).get(row_id, "15" if status == "answered" else ""),
+                "retrieved_pages": "15",
+            }
+        )
+    return RunSample(run_id=run_id, rows=rows, answer_hashes=hashes, fallbacks=fallbacks)
+
+
+def test_spread_reports_mean_min_max():
+    from istqb_rag.eval.answer_variance import spread
+
+    assert spread([0.8, 1.0, 0.9, 1.0]) == {"mean": 0.925, "min": 0.8, "max": 1.0, "runs": 4}
+    assert spread([None, 0.5]) == {"mean": 0.5, "min": 0.5, "max": 0.5, "runs": 1}
+    assert spread([None, None])["mean"] is None
+
+
+def test_status_flips_counted_per_row():
+    from istqb_rag.eval.answer_variance import mode_summary
+
+    base = {"q1": ("in_scope", "answered"), "q2": ("out_of_scope", "refused")}
+    flipped = {"q1": ("in_scope", "answered"), "q2": ("out_of_scope", "answered")}
+    summary = mode_summary(
+        [
+            _sample("r1", base, {"q1": "a", "q2": "b"}),
+            _sample("r2", flipped, {"q1": "a", "q2": "c"}),
+        ]
+    )
+    assert set(summary["status_flips"]) == {"q2"}
+    assert summary["status_flips"]["q2"] == ["answered", "refused"]
+
+
+def test_answer_stability_from_hashes():
+    from istqb_rag.eval.answer_variance import mode_summary
+
+    rows = {"q1": ("in_scope", "answered"), "q2": ("in_scope", "answered")}
+    summary = mode_summary(
+        [
+            _sample("r1", rows, {"q1": "same", "q2": "x"}),
+            _sample("r2", rows, {"q1": "same", "q2": "y"}),
+        ]
+    )
+    assert summary["answer_variants"] == {"q1": 1, "q2": 2}
+    assert summary["identical_rows"] == 1 and summary["measured_rows"] == 2
+    assert summary["stability_rate"] == 0.5
+
+
+def _modes(struct_fallbacks=0, struct_scope_answered=False, struct_cite="15", text_cite="15"):
+    from istqb_rag.eval.answer_variance import mode_summary
+
+    rows = {"q1": ("in_scope", "answered"), "q2": ("out_of_scope", "refused")}
+    struct_rows = dict(rows)
+    if struct_scope_answered:
+        struct_rows["q2"] = ("out_of_scope", "answered")
+    text = mode_summary([_sample("t1", rows, {"q1": "a"}, cited={"q1": text_cite})])
+    structured = mode_summary(
+        [
+            _sample(
+                "s1",
+                struct_rows,
+                {"q1": "b"},
+                fallbacks=struct_fallbacks,
+                cited={"q1": struct_cite},
+            )
+        ]
+    )
+    return text, structured
+
+
+def test_decision_rule_all_conditions_met():
+    from istqb_rag.eval.answer_variance import apply_decision_rule
+
+    decision = apply_decision_rule(*_modes())
+    assert decision["default"] == "structured"
+    assert decision["failed"] == []
+
+
+def test_decision_rule_fails_on_too_many_fallbacks():
+    from istqb_rag.eval.answer_variance import apply_decision_rule
+
+    decision = apply_decision_rule(*_modes(struct_fallbacks=2))
+    assert decision["default"] == "text" and decision["failed"] == ["a"]
+
+
+def test_decision_rule_fails_when_a_scope_row_is_answered():
+    from istqb_rag.eval.answer_variance import apply_decision_rule
+
+    decision = apply_decision_rule(*_modes(struct_scope_answered=True))
+    assert decision["default"] == "text" and decision["failed"] == ["b"]
+
+
+def test_decision_rule_fails_on_lower_citation_rate():
+    from istqb_rag.eval.answer_variance import apply_decision_rule
+
+    # structured cites nothing, text cites a page: structured mean is lower
+    decision = apply_decision_rule(*_modes(struct_cite=""))
+    assert decision["default"] == "text" and decision["failed"] == ["c"]
+
+
+def test_decision_rule_allows_exactly_one_fallback():
+    """The rule says 'at most 1', so one must pass."""
+    from istqb_rag.eval.answer_variance import apply_decision_rule
+
+    assert apply_decision_rule(*_modes(struct_fallbacks=1))["default"] == "structured"
