@@ -51,7 +51,7 @@ def _expects(row: dict, key: str) -> bool:
     return key in metrics_for(row["type"], row["status"])
 
 
-def _metric_stats(rows: list[dict]) -> dict:
+def _metric_stats(rows: list[dict], measured: list[str] | None = None) -> dict:
     """Means and NaN counts per metric.
 
     NaN is only counted for rows the routing table says should have been
@@ -59,6 +59,21 @@ def _metric_stats(rows: list[dict]) -> dict:
     """
     stats = {}
     for key in METRIC_KEYS:
+        if measured is not None and key not in measured:
+            # The run never asked the judge for this metric. Reported as absent,
+            # not as a column of failures, and excluded from the validity guard.
+            stats[key] = {
+                "mean": None,
+                "scored": 0,
+                "expected": 0,
+                "nan": 0,
+                "nan_truncated": 0,
+                "nan_parse_failure": 0,
+                "nan_rate": 0.0,
+                "parse_failure_rate": 0.0,
+                "unmeasured": True,
+            }
+            continue
         expected = [r for r in rows if _expects(r, key)]
         values = [r[key] for r in expected if not math.isnan(r[key])]
         missing = [r for r in expected if math.isnan(r[key])]
@@ -78,11 +93,12 @@ def _metric_stats(rows: list[dict]) -> dict:
             "parse_failure_rate": (
                 round(len(parse_failed) / len(expected), 4) if expected else 0.0
             ),
+            "unmeasured": False,
         }
     return stats
 
 
-def _grouped(rows: list[dict], field: str) -> dict:
+def _grouped(rows: list[dict], field: str, measured: list[str] | None = None) -> dict:
     """Per-group metric stats, each carrying the group's own row count.
 
     ``n`` matters on a small pilot: a chapter mean over two rows is not
@@ -95,7 +111,7 @@ def _grouped(rows: list[dict], field: str) -> dict:
         groups.setdefault(key, []).append(row)
     out = {}
     for key, group in sorted(groups.items()):
-        stats = _metric_stats(group)
+        stats = _metric_stats(group, measured)
         stats["n"] = len(group)
         stats["n_too_small"] = len(group) < MIN_GROUP_N
         out[key] = stats
@@ -136,7 +152,7 @@ def _percentile(values: list[int], pct: float) -> float:
     return float(ordered[max(0, min(index, len(ordered) - 1))])
 
 
-def build_summary(rows: list[dict]) -> dict:
+def build_summary(rows: list[dict], measured: list[str] | None = None) -> dict:
     """Aggregate scores.csv rows into the summary structure."""
     in_scope = [r for r in rows if r["type"] == "in_scope"]
     answered = [r for r in in_scope if r["status"] == "answered"]
@@ -149,10 +165,10 @@ def build_summary(rows: list[dict]) -> dict:
 
     error_rate = len(errors) / len(rows) if rows else 0.0
     return {
-        "overall": _metric_stats(rows),
-        "by_chapter": _grouped(in_scope, "chapter"),
-        "by_k_level": _grouped(in_scope, "k_level"),
-        "by_multi_chunk": _grouped(in_scope, "multi_chunk"),
+        "overall": _metric_stats(rows, measured),
+        "by_chapter": _grouped(in_scope, "chapter", measured),
+        "by_k_level": _grouped(in_scope, "k_level", measured),
+        "by_multi_chunk": _grouped(in_scope, "multi_chunk", measured),
         "in_scope_answer_rate": {
             "rate": round(len(answered) / len(in_scope), 4) if in_scope else None,
             "answered": len(answered),
@@ -265,7 +281,11 @@ def run_report(run_id: str, *, settings: Settings | None = None) -> dict:
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     rows = load_scores(run_dir / "scores.csv")
-    summary = build_summary(rows)
+    measured = None
+    config_path = run_dir / "config.json"
+    if config_path.exists():
+        measured = json.loads(config_path.read_text(encoding="utf-8")).get("metrics_scored")
+    summary = build_summary(rows, measured)
     _print_table(summary)
 
     bad = failed_nan_metrics(summary)

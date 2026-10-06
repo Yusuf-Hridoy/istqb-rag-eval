@@ -114,8 +114,10 @@ shows them blank for that reason.
 
 ## 4. Judge reliability
 
-**Not computed: `data/human_labels.csv` is still empty.** All ten `faithful`
-cells are blank, so there is nothing to compare the judge against. Kappa,
+**Not computed: `data/human_labels.csv` is empty.** All ten `faithful` cells are
+blank — the file is byte-identical to the one generated in Part A (98 bytes),
+and no `yes`/`no` label exists anywhere in the repository. There is nothing to
+compare the judge against. Kappa,
 percent agreement, the confusion matrix and the disagreement list all need that
 file; the code and its tests are in place and the numbers follow in one command
 once the labels exist.
@@ -137,6 +139,17 @@ runs at temperature 0, and `q048`'s faithfulness verdict truncated at exactly
 the same point on every one of three attempts, which is consistent with
 deterministic output but does not measure it. A proper variance run — the same
 saved answers re-scored several times — is a Phase 4 candidate.
+
+### Experiment 1b (whole sections) was not run
+
+The follow-up suggested by §2 — keeping each section whole instead of splitting
+it at `CHUNK_SIZE` — was left to Phase 4. It was conditional on an explicit
+go-ahead that was not given, and it has a known obstacle worth recording: the
+embedding model is `bge-small-en-v1.5`, whose context window is **512 tokens**.
+Section 1.3 is far longer than that, so an unsplit section chunk would be
+truncated at embedding time — the retrieval vector would cover only the opening
+of the section, which is close to the failure q007 already shows. Whole-section
+chunking therefore needs a longer-context embedding model, not just a flag.
 
 ## 5. Failure taxonomy counts
 

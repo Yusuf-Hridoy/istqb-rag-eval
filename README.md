@@ -176,7 +176,7 @@ variable each. Full numbers and the predictions written before either run:
 | Context recall, multi_chunk (n=5) | 0.578 | **0.400** | not re-judged |
 | Page hit rate (n=11) | 1.000 | **0.818** | 1.000 |
 | Citation rate (n=10 answered) | 0.800 | 1.000 | **1.000** |
-| Citation validity | 1.000 | 1.000 | **1.000** |
+| Citation validity | 1.000 (n=8) | 1.000 (n=10) | **1.000** (n=10) |
 | Out-of-scope accuracy (n=2) | 0.500 | 1.000 | **1.000** |
 | In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 |
 
@@ -186,6 +186,9 @@ targeted** — q011 now cites its pages, q072 is correctly recorded as a refusal
 with zero format fallbacks and no invented citations. Citation validity is
 reported next to citation rate for exactly that reason: letting the model state
 its own pages could otherwise raise the rate by inventing them.
+
+Judge calls for the whole phase: **11**, all in exp1 (context recall only).
+Experiment 2 and every rate above are deterministic.
 
 Both are still **pilot, n=15**. Per-group figures rest on two to six rows, and
 exp2's answers were never re-judged, so its effect on faithfulness is unmeasured

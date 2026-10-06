@@ -15,5 +15,8 @@
   "collection": "ctfl_v4_section",
   "answer_format": "text",
   "ragas_version": "0.4.3",
-  "dry_run": false
+  "dry_run": false,
+  "metrics_scored": [
+    "context_recall"
+  ]
 }

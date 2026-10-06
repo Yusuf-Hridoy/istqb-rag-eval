@@ -456,6 +456,21 @@ def _existing_scores(scores_path: Path) -> set[str]:
         return {row["id"] for row in csv.DictReader(f)}
 
 
+def record_metrics_scored(run_dir: Path, metrics: list[str] | None) -> None:
+    """Note in config.json which judge metrics this run actually asked for.
+
+    Without it, a metric a run never requested is indistinguishable from one the
+    judge failed on every row: both are a column of blanks. The report needs the
+    difference — the first is "unmeasured", the second would invalidate the run.
+    """
+    config_path = run_dir / "config.json"
+    if not config_path.exists():
+        return
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    config["metrics_scored"] = METRIC_KEYS if metrics is None else list(metrics)
+    config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+
+
 def write_judge_free_scores(
     run_id: str,
     rows: list[GoldenRow],
@@ -472,6 +487,7 @@ def write_judge_free_scores(
     answers = _load_answers(run_dir / "answers.jsonl")
     scores_path = run_dir / "scores.csv"
 
+    record_metrics_scored(run_dir, [])  # judge-free by construction
     written: list[dict] = []
     status_counts: dict[str, int] = {}
     fallbacks = 0
@@ -530,6 +546,7 @@ def run_score(
     scores_path = run_dir / "scores.csv"
     done = _existing_scores(scores_path)
 
+    record_metrics_scored(run_dir, only_metrics)
     pending = [r for r in rows if r.id not in done and r.id in answers]
     scored = skipped = judged = api_errors = 0
     calls = prompt_tokens = completion_tokens = 0

@@ -331,6 +331,10 @@ def _scores_row(row_id, status="answered", cp=0.8, cr=0.8, multi=False, **kw):
         "multi_chunk": multi,
         "cited_pages": "15",
         "retrieved_pages": "15",
+        "chapter": "1",
+        "k_level": "K2",
+        "latency_ms": 100,
+        "judge_truncated": False,
         "context_precision": cp,
         "context_recall": cr,
         "faithfulness": math.nan,
@@ -399,3 +403,39 @@ def test_citation_validity_averages_per_row_not_per_page():
 
 def test_citation_validity_with_no_cited_rows_at_all():
     assert citation_validity([_row("q1", cited_pages="")])["rate"] is None
+
+
+# --- Unmeasured metrics vs failed metrics -----------------------------------
+
+
+def test_unmeasured_metric_is_null_with_n_zero():
+    """A metric the run never requested is absent, not a column of failures."""
+    from istqb_rag.eval.step3_build_summary import build_summary
+
+    rows = [_scores_row("q1", cr=0.8), _scores_row("q2", cr=0.6)]
+    summary = build_summary(rows, measured=["context_recall"])
+    recall = summary["overall"]["context_recall"]
+    faith = summary["overall"]["faithfulness"]
+    assert recall["mean"] == 0.7 and recall["scored"] == 2 and recall["unmeasured"] is False
+    assert faith["mean"] is None and faith["scored"] == 0 and faith["expected"] == 0
+    assert faith["unmeasured"] is True
+
+
+def test_unmeasured_metric_never_invalidates_a_run():
+    """Blank because unrequested must not read as 100% parse failure."""
+    from istqb_rag.eval.step3_build_summary import build_summary, failed_nan_metrics
+
+    rows = [_scores_row(f"q{i}", cr=0.8) for i in range(5)]
+    summary = build_summary(rows, measured=["context_recall"])
+    assert summary["overall"]["faithfulness"]["parse_failure_rate"] == 0.0
+    assert failed_nan_metrics(summary) == []
+
+
+def test_measured_none_keeps_the_old_behaviour():
+    """pilot-1 has no metrics_scored recorded, so every metric is still judged."""
+    from istqb_rag.eval.step3_build_summary import build_summary
+
+    rows = [_scores_row("q1", cr=0.8)]
+    summary = build_summary(rows)
+    assert summary["overall"]["context_recall"]["unmeasured"] is False
+    assert summary["overall"]["faithfulness"]["expected"] == 1  # still expected, still missing

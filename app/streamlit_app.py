@@ -81,6 +81,10 @@ def _load_questions(golden_path_str: str) -> dict[str, str]:
 def _metric_card(column, key: str, stats: dict) -> None:
     mean = stats.get("mean")
     column.metric(METRIC_LABELS[key], f"{mean:.3f}" if mean is not None else "—")
+    if stats.get("unmeasured"):
+        # Absent because the run never asked for it, not because it scored badly.
+        column.caption("not measured in this run")
+        return
     column.caption(f"{stats.get('scored', 0)} rows scored · {stats.get('nan', 0)} NaN")
 
 
