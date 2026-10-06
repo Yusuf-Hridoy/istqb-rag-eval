@@ -24,6 +24,58 @@ def citation_rate(rows: list[dict]) -> dict:
     }
 
 
+def citation_validity(rows: list[dict]) -> dict:
+    """Share of cited pages that actually appear among the row's retrieved pages.
+
+    Structured mode lets the model report its own cited pages, so citation
+    rate alone can rise from invented citations. This checks each cited page
+    against the pages retrieval actually returned — deterministic, no judge.
+    Computed over answered in-scope rows that cite at least one page; a row
+    with nothing cited has nothing to validate.
+    """
+    cited = [
+        r
+        for r in rows
+        if r["type"] == "in_scope" and r["status"] == "answered" and _pages(r.get("cited_pages"))
+    ]
+    # A row whose retrieved pages were never recorded cannot be validated. Runs
+    # from before the retrieved_pages column existed would otherwise read as
+    # 0.0 — "every citation invented" — which is missing data, not a finding.
+    unknown_ids = [r["id"] for r in cited if not _pages(r.get("retrieved_pages"))]
+    checkable = [r for r in cited if _pages(r.get("retrieved_pages"))]
+    if not checkable:
+        return {
+            "rate": None,
+            "rows": 0,
+            "valid_pages": 0,
+            "total_pages": 0,
+            "invalid_ids": [],
+            "unknown_ids": unknown_ids,
+            "note": "no run data recorded which pages were retrieved" if unknown_ids else "",
+        }
+    per_row = []
+    valid = total = 0
+    invalid_ids = []
+    for row in checkable:
+        pages = _pages(row.get("cited_pages"))
+        got = _pages(row.get("retrieved_pages"))
+        row_valid = len(pages & got)
+        per_row.append(row_valid / len(pages))
+        valid += row_valid
+        total += len(pages)
+        if row_valid < len(pages):
+            invalid_ids.append(row["id"])
+    return {
+        "rate": round(sum(per_row) / len(per_row), 4),
+        "rows": len(checkable),
+        "valid_pages": valid,
+        "total_pages": total,
+        "invalid_ids": invalid_ids,
+        "unknown_ids": unknown_ids,
+        "note": f"{len(unknown_ids)} row(s) had no retrieved pages recorded" if unknown_ids else "",
+    }
+
+
 def _pages(value: object) -> set[int]:
     """Parse a ';'-separated page cell into a set of ints."""
     if not value:
@@ -115,3 +167,33 @@ def confusion_matrix(pairs: list[tuple[str, str]]) -> dict:
         else:
             counts["human_no_judge_yes"] += 1
     return counts
+
+
+def backfill_retrieved_pages(rows: list[dict], answers_path) -> list[dict]:
+    """Fill in retrieved_pages from a run's answers.jsonl when the column predates it.
+
+    pilot-1 was scored before scores.csv carried retrieved pages. The answers
+    file still has them, so the run can be measured retroactively without being
+    re-run or rewritten. Rows are copied, never mutated in place.
+    """
+    import json
+    from pathlib import Path
+
+    path = Path(answers_path)
+    if not path.exists():
+        return rows
+    pages_by_id = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        record = json.loads(line)
+        contexts = record.get("result", {}).get("contexts", [])
+        pages_by_id[record["id"]] = ";".join(
+            str(p) for p in dict.fromkeys(c["page"] for c in contexts)
+        )
+    out = []
+    for row in rows:
+        if not str(row.get("retrieved_pages") or "").strip() and row["id"] in pages_by_id:
+            row = {**row, "retrieved_pages": pages_by_id[row["id"]]}
+        out.append(row)
+    return out

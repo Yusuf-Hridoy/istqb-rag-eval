@@ -163,6 +163,34 @@ chapter or K-level.
 
 Findings: `docs/phase-2-findings.md` (written after the pilot run).
 
+## Experiments
+
+Phase 3 ran two controlled experiments against the `pilot-1` baseline, one
+variable each. Full numbers and the predictions written before either run:
+[docs/phase-3-findings.md](docs/phase-3-findings.md); per-row failure types:
+[docs/failure-taxonomy.md](docs/failure-taxonomy.md).
+
+| | pilot-1 | exp1 section chunking | exp2 structured answers |
+|---|---|---|---|
+| Context recall (n=11) | 0.778 | **0.667** | not re-judged |
+| Context recall, multi_chunk (n=5) | 0.578 | **0.400** | not re-judged |
+| Page hit rate (n=11) | 1.000 | **0.818** | 1.000 |
+| Citation rate (n=10 answered) | 0.800 | 1.000 | **1.000** |
+| Citation validity | 1.000 | 1.000 | **1.000** |
+| Out-of-scope accuracy (n=2) | 0.500 | 1.000 | **1.000** |
+| In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 |
+
+**Section chunking made retrieval worse** and did not fix q007, the
+seven-principles row it was built for. **Structured answers fixed both rows they
+targeted** — q011 now cites its pages, q072 is correctly recorded as a refusal —
+with zero format fallbacks and no invented citations. Citation validity is
+reported next to citation rate for exactly that reason: letting the model state
+its own pages could otherwise raise the rate by inventing them.
+
+Both are still **pilot, n=15**. Per-group figures rest on two to six rows, and
+exp2's answers were never re-judged, so its effect on faithfulness is unmeasured
+rather than unchanged.
+
 ## Roadmap
 
 - **Phase 1:** ingest + single-turn RAG pipeline with citations
@@ -170,8 +198,8 @@ Findings: `docs/phase-2-findings.md` (written after the pilot run).
 - **Phase 2 (this phase):** golden dataset + Ragas evaluation runner scored
   against `answer()`, with an eval dashboard tab. First baseline is a 15-row
   pilot; the remaining 60 rows are kept for later runs.
-- **Phase 3:** retrieval experiments (e.g. section-aware chunking) measured with
-  Ragas.
+- **Phase 3 (this phase):** two controlled experiments, deterministic metrics,
+  judge calibration and a failure taxonomy.
 - **Phase 4:** judge-model evaluation and final report.
 
 ## Notes

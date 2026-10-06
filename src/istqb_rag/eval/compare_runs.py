@@ -11,7 +11,12 @@ import math
 from pathlib import Path
 
 from istqb_rag.config import Settings, get_settings
-from istqb_rag.eval.deterministic_metrics import citation_rate, page_hit_rate
+from istqb_rag.eval.deterministic_metrics import (
+    backfill_retrieved_pages,
+    citation_rate,
+    citation_validity,
+    page_hit_rate,
+)
 from istqb_rag.eval.step2_judge_scores import METRIC_KEYS
 from istqb_rag.eval.step3_build_summary import load_scores
 
@@ -123,6 +128,10 @@ def compare(
             "base": citation_rate(base_rows),
             "new": citation_rate(new_rows),
         },
+        "citation_validity": {
+            "base": citation_validity(base_rows),
+            "new": citation_validity(new_rows),
+        },
         "out_of_scope_accuracy": {
             "base": _scope_accuracy(base_rows, "out_of_scope"),
             "new": _scope_accuracy(new_rows, "out_of_scope"),
@@ -156,6 +165,7 @@ def print_comparison(data: dict, base_id: str, new_id: str) -> None:
 
     for label, key in (
         ("citation rate", "citation_rate"),
+        ("citation validity", "citation_validity"),
         ("out-of-scope acc", "out_of_scope_accuracy"),
         ("not-in-syllabus acc", "not_in_syllabus_accuracy"),
         ("answer rate", "answer_rate"),
@@ -167,6 +177,9 @@ def print_comparison(data: dict, base_id: str, new_id: str) -> None:
         if key == "citation_rate":
             b, n = pair["base"]["rate"], pair["new"]["rate"]
             bn, nn = pair["base"]["answered"], pair["new"]["answered"]
+        elif key == "citation_validity":
+            b, n = pair["base"]["rate"], pair["new"]["rate"]
+            bn, nn = pair["base"]["rows"], pair["new"]["rows"]
         elif key == "page_hit_rate":
             b, n = pair["base"]["rate"], pair["new"]["rate"]
             bn, nn = pair["base"]["total"], pair["new"]["total"]
@@ -206,6 +219,8 @@ def run_compare(
     if not new_rows:
         raise FileNotFoundError(f"no scores.csv for new run {new_id}")
 
+    base_rows = backfill_retrieved_pages(base_rows, settings.runs_dir / base_id / "answers.jsonl")
+    new_rows = backfill_retrieved_pages(new_rows, settings.runs_dir / new_id / "answers.jsonl")
     data = compare(base_rows, new_rows, reference_pages)
     data["base_run"] = base_id
     data["new_run"] = new_id

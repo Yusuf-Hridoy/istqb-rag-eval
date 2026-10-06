@@ -89,7 +89,11 @@ def _quick(args) -> None:
     """Generate answers, then report everything that needs no judge."""
     from istqb_rag.config import get_settings
     from istqb_rag.eval.compare_runs import reference_pages_from_golden
-    from istqb_rag.eval.deterministic_metrics import citation_rate, page_hit_rate
+    from istqb_rag.eval.deterministic_metrics import (
+        citation_rate,
+        citation_validity,
+        page_hit_rate,
+    )
     from istqb_rag.pipeline import answer
 
     settings = get_settings()
@@ -109,6 +113,13 @@ def _quick(args) -> None:
     print(
         f"citation rate: {cite['rate']} ({cite['cited']}/{cite['answered']} answered rows)"
         + (f" — uncited: {', '.join(cite['uncited_ids'])}" if cite["uncited_ids"] else "")
+    )
+    valid = citation_validity(scored)
+    print(
+        f"citation validity: {valid['rate']} "
+        f"({valid['valid_pages']}/{valid['total_pages']} cited pages were retrieved,"
+        f" over {valid['rows']} rows)"
+        + (f" — invented in: {', '.join(valid['invalid_ids'])}" if valid["invalid_ids"] else "")
     )
     hit = page_hit_rate(scored, reference_pages_from_golden(settings.golden_path))
     print(f"page hit rate: {hit['rate']} ({hit['hits']}/{hit['total']})")

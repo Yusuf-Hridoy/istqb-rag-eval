@@ -10,6 +10,7 @@ from istqb_rag.config import active_collection
 from istqb_rag.eval.compare_runs import compare
 from istqb_rag.eval.deterministic_metrics import (
     citation_rate,
+    citation_validity,
     cohens_kappa,
     confusion_matrix,
     page_hit_rate,
@@ -233,6 +234,29 @@ def test_page_hit_rate_counts_a_row_as_hit_when_any_page_overlaps():
     assert hit["missed_ids"] == ["q2"]
 
 
+def test_citation_validity_flags_invented_pages():
+    """One cited page was retrieved, one was invented → 0.5."""
+    rows = [_row("q1", cited_pages="15;99", retrieved_pages="15;17")]
+    result = citation_validity(rows)
+    assert result["rate"] == 0.5
+    assert result["valid_pages"] == 1
+    assert result["total_pages"] == 2
+    assert result["invalid_ids"] == ["q1"]
+
+
+def test_citation_validity_skips_rows_with_nothing_cited():
+    rows = [
+        _row("q1", cited_pages="15", retrieved_pages="15;17"),
+        _row("q2", cited_pages=""),
+        _row("q3", status="no_context", cited_pages=""),
+        _row("q4", cited_pages="17", retrieved_pages="15"),  # fully invented
+    ]
+    result = citation_validity(rows)
+    assert result["rows"] == 2
+    assert result["rate"] == 0.5  # macro average of per-row rates: (1.0 + 0.0) / 2
+    assert result["invalid_ids"] == ["q4"]
+
+
 # --- Cheap scoring ----------------------------------------------------------
 
 
@@ -350,3 +374,28 @@ def test_compare_reports_rows_present_in_only_one_run():
     data = compare([_scores_row("q1")], [_scores_row("q1"), _scores_row("q2")])
     assert data["new_only_ids"] == ["q2"]
     assert data["base_only_ids"] == []
+
+
+# --- Citation validity ------------------------------------------------------
+
+
+def test_citation_validity_all_pages_retrieved():
+    rows = [_row("q1", cited_pages="15;17", retrieved_pages="15;17;20")]
+    validity = citation_validity(rows)
+    assert validity["rate"] == 1.0
+    assert validity["invalid_ids"] == []
+
+
+def test_citation_validity_averages_per_row_not_per_page():
+    """A row citing many pages must not outvote a row citing one."""
+    rows = [
+        _row("q1", cited_pages="15;16;17;18", retrieved_pages="15;16;17;18"),  # 1.0
+        _row("q2", cited_pages="99", retrieved_pages="15"),  # 0.0
+    ]
+    validity = citation_validity(rows)
+    assert validity["rate"] == 0.5  # macro: (1.0 + 0.0) / 2
+    assert validity["valid_pages"] == 4 and validity["total_pages"] == 5  # micro differs
+
+
+def test_citation_validity_with_no_cited_rows_at_all():
+    assert citation_validity([_row("q1", cited_pages="")])["rate"] is None

@@ -13,7 +13,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from istqb_rag.config import Settings, get_settings
+from istqb_rag.config import Settings, active_collection, get_settings
 from istqb_rag.eval.dataset import GoldenRow
 from istqb_rag.result_types import RagResult
 
@@ -60,6 +60,10 @@ def write_run_config(
         "min_relevance": settings.min_relevance,
         "chunk_size": settings.chunk_size,
         "chunk_overlap": settings.chunk_overlap,
+        # Phase 3: which experiment variant produced this run
+        "chunking": settings.chunking,
+        "collection": active_collection(settings),
+        "answer_format": settings.answer_format,
         "ragas_version": ragas.__version__,
         "dry_run": dry_run,
     }
