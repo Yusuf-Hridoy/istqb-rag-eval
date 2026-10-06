@@ -568,3 +568,17 @@ def test_decision_rule_allows_exactly_one_fallback():
     from istqb_rag.eval.answer_variance import apply_decision_rule
 
     assert apply_decision_rule(*_modes(struct_fallbacks=1))["default"] == "structured"
+
+
+def test_answer_hashes_come_from_scores_not_answers_file():
+    """Stability must be measurable on a clean checkout."""
+    from istqb_rag.eval.answer_variance import answer_hashes
+
+    rows = [
+        {"id": "q1", "answer_sha256": "abc", "format_fallback": ""},
+        {"id": "q2", "answer_sha256": "def", "format_fallback": "true"},
+        {"id": "q3", "answer_sha256": "", "format_fallback": ""},  # predates the column
+    ]
+    hashes, fallbacks = answer_hashes(rows)
+    assert hashes == {"q1": "abc", "q2": "def"}  # q3 omitted, not counted as identical
+    assert fallbacks == 1

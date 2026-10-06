@@ -20,6 +20,7 @@ from istqb_rag.eval.dataset import DatasetError, load_golden  # noqa: E402
 from istqb_rag.eval.readme_tables import (  # noqa: E402
     apply_tables,
     build_tables,
+    cells_with_missing_values,
     missing_markers,
 )
 from istqb_rag.eval.step2_judge_scores import SCORES_COLUMNS  # noqa: E402
@@ -37,6 +38,15 @@ def check_readme_tables(problems: list[str]) -> None:
         return
     original = readme.read_text(encoding="utf-8")
     tables = build_tables()
+
+    incomplete = cells_with_missing_values(tables)
+    if incomplete:
+        problems.append(
+            "published table(s) contain a missing value (n/a): "
+            + ", ".join(incomplete)
+            + " — a README number could not be computed from the committed run "
+            "files, which usually means a run is missing a column"
+        )
 
     absent = missing_markers(original, tables)
     if absent:

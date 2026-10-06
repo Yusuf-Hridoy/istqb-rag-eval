@@ -596,3 +596,51 @@ a test that asserts exactly that.
 The allowlist is taken from `SCORES_COLUMNS`, so adding a column to the scorer
 automatically permits it — the check guards against *unknown* columns appearing
 in a committed file, not against the schema evolving deliberately.
+
+## Published numbers must come from committed files, not answers.jsonl
+
+CI failed on a clean checkout, and the cause was a design mistake rather than a
+bug in the workflow. `runs/*/answers.jsonl` is gitignored because it holds
+syllabus text, but two code paths that produce **published** numbers were
+reading it:
+
+* `readme_tables` backfilled `retrieved_pages` from it, so pilot-1's citation
+  validity existed only on the machine that had run the eval. On GitHub the
+  value was `None` and the formatter crashed on `f"{None:.3f}"`.
+* `answer_variance.load_run` read answer hashes and format-fallback counts from
+  it, so the variance table's stability and fallback rows were equally
+  unreproducible.
+
+Locally everything passed, which is exactly what made it dangerous: the README
+claimed numbers that no one else could regenerate.
+
+The fix is to persist the inputs rather than recompute them from a gitignored
+file:
+
+* `scores.csv` gained **`answer_sha256`** — a hash of the answer, never the
+  text — alongside the existing `retrieved_pages` and `format_fallback`.
+* `scripts/backfill_run_columns.py` filled those columns for the ten existing
+  runs from each one's local `answers.jsonl`. It only ever *adds* missing cells;
+  a pre-existing value is never overwritten, which was verified cell by cell on
+  pilot-1 before and after.
+* `readme_tables` and `compare_runs` no longer call `backfill_retrieved_pages`,
+  and `answer_variance` reads hashes and fallbacks from `scores.csv`.
+
+The regenerated README was byte-identical afterwards, confirming the persisted
+columns reproduce what the backfill had been computing.
+
+### Two guards so this cannot recur quietly
+
+1. **A missing value is never rendered silently.** `readme_tables` formats an
+   absent number as `n/a` instead of raising, and the integrity check *fails the
+   build* if any published table contains one. Crashing in CI was arguably better
+   than publishing a hole, so the check now treats a hole as the error it is.
+2. **A test builds every table from a fixture containing no `answers.jsonl`**,
+   which is the condition CI actually runs under.
+
+Verified by cloning the repo into a temporary directory, copying in only files
+that would be committed, and running the five `ci.yml` steps there: `uv sync
+--frozen`, ruff check, ruff format, 139 tests, integrity check — all pass with
+no `.env`, no `.chroma` and no `answers.jsonl` present. Removing the
+`retrieved_pages` column again in that clone reproduces the original failure, now
+as a clear message rather than a traceback.

@@ -156,3 +156,57 @@ def test_reviewed_row_without_reviewed_by_fails(tmp_path, monkeypatch):
     module.check_golden_dataset(problems)
     assert problems, "a reviewed row with no reviewed_by must be reported"
     assert "reviewed_by" in problems[0]
+
+
+# --- Nothing published may depend on answers.jsonl --------------------------
+
+
+def test_tables_build_without_any_answers_file(tmp_path, monkeypatch):
+    """Simulate a clean checkout: scores.csv present, answers.jsonl absent."""
+    import shutil
+
+    from istqb_rag.config import get_settings
+    from istqb_rag.eval.readme_tables import build_tables, cells_with_missing_values
+
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    for run in (REPO_ROOT / "runs").iterdir():
+        if not run.is_dir():
+            continue
+        target = runs / run.name
+        target.mkdir()
+        for name in ("config.json", "scores.csv", "summary.json"):
+            if (run / name).exists():
+                shutil.copy(run / name, target / name)  # deliberately not answers.jsonl
+
+    assert not list(runs.rglob("answers.jsonl")), "the fixture must mimic a clean checkout"
+
+    import dataclasses
+
+    clean = dataclasses.replace(get_settings(), runs_dir=runs)
+    tables = build_tables(clean)
+
+    # every table builds, and none of them reports a hole
+    assert set(tables) == {"baseline", "experiments", "variance"}
+    assert cells_with_missing_values(tables) == []
+    assert "0.778" in tables["experiments"]  # pilot-1 context recall
+    assert "1.000 (n=8)" in tables["experiments"]  # pilot-1 citation validity, was the crash
+    # the variance table needs answer hashes, which now come from scores.csv
+    assert "identical answer every run" in tables["variance"]
+    assert "4 of 15" in tables["variance"]
+
+
+def test_missing_value_is_rendered_not_raised():
+    from istqb_rag.eval.readme_tables import NA, _fmt
+
+    assert _fmt(None) == NA
+    assert _fmt(None, 11) == NA
+    assert _fmt(0.7777) == "0.778"
+    assert _fmt(0.7777, 11) == "0.778 (n=11)"
+
+
+def test_a_missing_value_in_a_published_table_is_a_failure():
+    from istqb_rag.eval.readme_tables import NA, cells_with_missing_values
+
+    assert cells_with_missing_values({"experiments": f"| x | {NA} |"}) == ["experiments"]
+    assert cells_with_missing_values({"experiments": "| x | 0.800 |"}) == []

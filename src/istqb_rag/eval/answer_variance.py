@@ -5,12 +5,13 @@ single-run answer-side number one sample from an unmeasured distribution. This
 module reads several runs of the same configuration and reports the spread, the
 rows whose status flipped, and how often a row produced the same answer twice.
 
-Answer text is never read into the output: stability is measured from SHA-256
-hashes, so nothing quotable reaches a committed file. Zero judge calls.
+Answer text is never read into the output: stability is measured from the
+``answer_sha256`` column, so nothing quotable reaches a committed file — and,
+just as importantly, nothing here reads the gitignored ``answers.jsonl``. Every
+number comes from a committed ``scores.csv``, so CI can reproduce it on a clean
+checkout. Zero judge calls.
 """
 
-import hashlib
-import json
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,33 +30,29 @@ class RunSample:
     fallbacks: int
 
 
-def answer_hashes(answers_path: Path) -> tuple[dict[str, str], int]:
-    """{id: sha256 of the answer} plus the run's format-fallback count.
+def answer_hashes(rows: list[dict]) -> tuple[dict[str, str], int]:
+    """{id: answer hash} plus the run's format-fallback count, from scores.csv.
 
-    Hashes, not text: two runs agreeing is all this study needs to know, and a
-    hash cannot leak syllabus wording into a committed document.
+    Both come from committed columns (``answer_sha256`` and ``format_fallback``),
+    so this works on a clean checkout where ``answers.jsonl`` is absent. A run
+    predating those columns yields no hashes, and stability is then reported over
+    the rows that do have one rather than silently counting them as identical.
     """
-    hashes: dict[str, str] = {}
-    fallbacks = 0
-    if not answers_path.exists():
-        return hashes, fallbacks
-    for line in answers_path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        record = json.loads(line)
-        result = record["result"]
-        text = (result.get("answer") or "").strip()
-        hashes[record["id"]] = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        if result.get("format_fallback"):
-            fallbacks += 1
+    hashes = {
+        row["id"]: row["answer_sha256"]
+        for row in rows
+        if str(row.get("answer_sha256") or "").strip()
+    }
+    fallbacks = sum(1 for row in rows if str(row.get("format_fallback") or "").strip())
     return hashes, fallbacks
 
 
 def load_run(run_dir: Path) -> RunSample:
-    hashes, fallbacks = answer_hashes(run_dir / "answers.jsonl")
+    rows = load_scores(run_dir / "scores.csv")
+    hashes, fallbacks = answer_hashes(rows)
     return RunSample(
         run_id=run_dir.name,
-        rows=load_scores(run_dir / "scores.csv"),
+        rows=rows,
         answer_hashes=hashes,
         fallbacks=fallbacks,
     )
@@ -296,7 +293,8 @@ def render_markdown(text: dict, structured: dict, decision: dict, notes: dict) -
     if any_case:
         out.append(
             "Readings were taken locally from the run's `answers.jsonl`, which is "
-            "gitignored. The replies themselves are not reproduced here."
+            "gitignored and is never read by any published table. The replies "
+            "themselves are not reproduced here."
         )
         out.append("")
 

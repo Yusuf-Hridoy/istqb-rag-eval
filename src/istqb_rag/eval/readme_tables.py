@@ -13,7 +13,6 @@ from istqb_rag.config import Settings, get_settings
 from istqb_rag.eval.answer_variance import apply_decision_rule, load_run, mode_summary
 from istqb_rag.eval.compare_runs import reference_pages_from_golden
 from istqb_rag.eval.deterministic_metrics import (
-    backfill_retrieved_pages,
     citation_rate,
     citation_validity,
     page_hit_rate,
@@ -43,9 +42,19 @@ METRIC_LABELS = {
 }
 
 
+NA = "n/a"
+
+
 def _rows(settings: Settings, run_id: str) -> list[dict]:
-    run_dir = settings.runs_dir / run_id
-    return backfill_retrieved_pages(load_scores(run_dir / "scores.csv"), run_dir / "answers.jsonl")
+    """Committed scores only — never answers.jsonl, which CI does not have."""
+    return load_scores(settings.runs_dir / run_id / "scores.csv")
+
+
+def _fmt(value: float | None, n: int | None = None) -> str:
+    """Render a number, or NA when it is missing. Never raises on None."""
+    if value is None:
+        return NA
+    return f"{value:.3f}" if n is None else f"{value:.3f} (n={n})"
 
 
 def baseline_table(settings: Settings) -> str:
@@ -61,7 +70,7 @@ def baseline_table(settings: Settings) -> str:
     ]
     for key, label in METRIC_LABELS.items():
         stats = summary["overall"][key]
-        mean = "—" if stats["mean"] is None else f"{stats['mean']:.3f}"
+        mean = _fmt(stats["mean"])
         lines.append(
             f"| {label} | {mean} | {stats['scored']} "
             f"| {stats['nan_parse_failure']} / {stats['nan_truncated']} |"
@@ -69,7 +78,7 @@ def baseline_table(settings: Settings) -> str:
     rate = summary["in_scope_answer_rate"]
     lines += [
         "",
-        f"In-scope answer rate {rate['rate']:.3f} ({rate['answered']}/{rate['total']}) · "
+        f"In-scope answer rate {_fmt(rate['rate'])} ({rate['answered']}/{rate['total']}) · "
         f"errors {summary['errors']['count']} · "
         f"latency median {summary['latency_ms']['median']:.0f} ms, "
         f"p95 {summary['latency_ms']['p95']:.0f} ms.",
@@ -112,27 +121,25 @@ def experiments_table(settings: Settings) -> str:
     lines.append(
         row(
             "Context recall",
-            lambda d: (
-                "not re-judged" if d["recall"] is None else f"{d['recall']:.3f} (n={d['recall_n']})"
-            ),
+            lambda d: "not re-judged" if d["recall"] is None else _fmt(d["recall"], d["recall_n"]),
         )
     )
     lines.append(
-        row("Page hit rate", lambda d: f"{d['page_hit']['rate']:.3f} (n={d['page_hit']['total']})")
+        row("Page hit rate", lambda d: _fmt(d["page_hit"]["rate"], d["page_hit"]["total"]))
     )
     lines.append(
         row(
             "Citation rate",
-            lambda d: f"{d['citation']['rate']:.3f} (n={d['citation']['answered']})",
+            lambda d: _fmt(d["citation"]["rate"], d["citation"]["answered"]),
         )
     )
     lines.append(
         row(
             "Citation validity",
-            lambda d: f"{d['validity']['rate']:.3f} (n={d['validity']['rows']})",
+            lambda d: _fmt(d["validity"]["rate"], d["validity"]["rows"]),
         )
     )
-    lines.append(row("Out-of-scope accuracy", lambda d: f"{d['oos']:.3f} (n={d['oos_n']})"))
+    lines.append(row("Out-of-scope accuracy", lambda d: _fmt(d["oos"], d["oos_n"])))
     return "\n".join(lines)
 
 
@@ -144,7 +151,9 @@ def variance_table(settings: Settings) -> str:
 
     def cell(mode, key):
         s = mode["rates"][key]
-        return "—" if s["mean"] is None else f"{s['mean']:.3f} ({s['min']:.3f}–{s['max']:.3f})"
+        if s["mean"] is None:
+            return NA
+        return f"{s['mean']:.3f} ({s['min']:.3f}–{s['max']:.3f})"
 
     lines = [
         "Mean across 4 runs of each mode, with (min–max).",
@@ -226,3 +235,13 @@ def write_readme_tables(readme_path: Path, settings: Settings | None = None) -> 
     if updated != original:
         readme_path.write_text(updated, encoding="utf-8")
     return updated != original
+
+
+def cells_with_missing_values(tables: dict[str, str]) -> list[str]:
+    """Table names whose rendered text contains a missing value.
+
+    A published table must never ship an "n/a": it means a number the README
+    claims to report could not be computed from the committed run files. The
+    integrity check turns this into a build failure rather than a quiet gap.
+    """
+    return sorted(name for name, body in tables.items() if NA in body)

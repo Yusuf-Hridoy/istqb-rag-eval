@@ -12,7 +12,6 @@ from pathlib import Path
 
 from istqb_rag.config import Settings, get_settings
 from istqb_rag.eval.deterministic_metrics import (
-    backfill_retrieved_pages,
     citation_rate,
     citation_validity,
     page_hit_rate,
@@ -219,8 +218,6 @@ def run_compare(
     if not new_rows:
         raise FileNotFoundError(f"no scores.csv for new run {new_id}")
 
-    base_rows = backfill_retrieved_pages(base_rows, settings.runs_dir / base_id / "answers.jsonl")
-    new_rows = backfill_retrieved_pages(new_rows, settings.runs_dir / new_id / "answers.jsonl")
     data = compare(base_rows, new_rows, reference_pages)
     data["base_run"] = base_id
     data["new_run"] = new_id

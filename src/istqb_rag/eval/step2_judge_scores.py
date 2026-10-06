@@ -17,6 +17,7 @@ Two kinds of NaN are deliberately kept apart:
 """
 
 import csv
+import hashlib
 import json
 import math
 import os
@@ -56,6 +57,9 @@ SCORES_COLUMNS = [
     "judge_truncated",
     "retrieved_pages",
     "format_fallback",
+    # SHA-256 of the answer text. A hash, never the text, so repeated runs can be
+    # compared for stability from committed files alone — see answer_variance.
+    "answer_sha256",
 ]
 
 _QUOTA_MARKERS = (
@@ -456,6 +460,11 @@ def _existing_scores(scores_path: Path) -> set[str]:
         return {row["id"] for row in csv.DictReader(f)}
 
 
+def answer_digest(text: str | None) -> str:
+    """SHA-256 of an answer, so stability can be measured without storing text."""
+    return hashlib.sha256((text or "").strip().encode("utf-8")).hexdigest()
+
+
 def record_metrics_scored(run_dir: Path, metrics: list[str] | None) -> None:
     """Note in config.json which judge metrics this run actually asked for.
 
@@ -518,6 +527,7 @@ def write_judge_free_scores(
                     str(p) for p in dict.fromkeys(c.page for c in result.contexts)
                 ),
                 "format_fallback": "true" if getattr(result, "format_fallback", False) else "",
+                "answer_sha256": answer_digest(result.answer),
             }
             for key in METRIC_KEYS:
                 record[key] = ""
@@ -610,6 +620,7 @@ def run_score(
                     str(p) for p in dict.fromkeys(c.page for c in result.contexts)
                 ),
                 "format_fallback": "true" if getattr(result, "format_fallback", False) else "",
+                "answer_sha256": answer_digest(result.answer),
             }
             for key in METRIC_KEYS:
                 value = outcome.values.get(key, math.nan)
