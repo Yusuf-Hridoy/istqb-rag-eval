@@ -34,8 +34,9 @@ the thing that would have to be fixed first.
 
 `unfaithful_answer` and `judge_error` are distinguished by exactly one piece of
 evidence: whether a human, reading only the retrieved chunks, agrees with the
-judge. `data/human_labels.csv` is still blank, so neither can be assigned
-without guessing.
+judge. `data/human_labels.csv` was never filled in — it is byte-identical to the
+file generated in Part A — so neither type can be assigned without guessing, and
+guessing is precisely what the brief forbids here.
 
 q027 is the row that hangs on this. The judge scored its faithfulness 0.100
 while the answer cites the right pages and retrieval returned them. If a human
@@ -43,6 +44,13 @@ says the answer is faithful, the row is `judge_error`; if not, it is
 `unfaithful_answer`. The brief is explicit that a row must never be labelled
 `judge_error` on the model's own reading of the answer, so it stays unassigned
 until the labels exist.
+
+**q027 remains unassigned.** Nothing in this phase changed that: it was not
+re-judged in either experiment, and the control run in §3a of the findings does
+not bear on it. Note that q027's answer differs between `pilot-1` and
+`pilot-1-repeat` — the answer model is not reproducible at `temperature=0` — so
+a future label must be taken against a specific run's answer and chunks, not
+against "the" answer.
 
 Seven rows carry types that depend on no judgement at all — retrieved pages,
 recorded status, citation presence and the truncation flag are all facts on
@@ -52,6 +60,13 @@ disk — so those are final.
 
 Section chunking (Experiment 1) did not clear either `retrieval_miss`: q007 and
 q058 both still have context recall 0.000, and q001's row got worse rather than
-better. Structured answers (Experiment 2) cleared both rows it targeted —
-q011 now cites pages 26 and 24, q072 is recorded `refused`. See
-`docs/phase-3-findings.md` for the numbers.
+better. These are retrieval-side numbers, and retrieval is deterministic across
+runs, so the comparison holds.
+
+Structured answers (Experiment 2) cleared both rows it targeted — q011 cites
+pages 26 and 24, q072 is recorded `refused` — but **so did a plain repeat of the
+unchanged baseline** (`runs/pilot-1-repeat`). Both `missing_citation` and
+`status_mislabel` therefore clear without any change to the system, and the
+format cannot be credited for the counts. What the format does change is that
+`status_mislabel` becomes impossible by construction rather than dependent on
+the model's wording. See §3a of `docs/phase-3-findings.md`.

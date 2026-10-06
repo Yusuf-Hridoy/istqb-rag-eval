@@ -77,7 +77,10 @@ unmeasured, not regressions.
 
 ## 3. Experiment 2 result — structured answers
 
-**The prediction held on both halves.**
+**The prediction's numbers were met, but the numbers do not belong to the
+experiment.** A control run added afterwards reproduces both gains with no
+change at all. The mechanism argument survives; the measured effect does not.
+Read §3a before using any figure in this table as evidence.
 
 `runs/exp2-structured-answers` — `ANSWER_FORMAT=structured`, page chunking (the
 baseline collection), everything else held at pilot-1. **Zero judge calls**: every
@@ -112,24 +115,93 @@ re-judged, so faithfulness, context precision, context recall and response
 relevancy are **unmeasured** for exp2 — not unchanged. The comparison table
 shows them blank for that reason.
 
+## 3a. Attribution check — the exp2 gains are not attributable to the format
+
+Experiment 1 used plain text mode and still reached citation rate 1.000 and
+out-of-scope accuracy 1.000, which made both exp2 "gains" suspect. So
+`runs/pilot-1-repeat` re-ran the **pilot-1 configuration unchanged** —
+`CHUNKING=page`, `ANSWER_FORMAT=text`, same models, same `TOP_K`, same dataset.
+Zero judge calls.
+
+| | pilot-1 | **pilot-1-repeat** (same config) | exp2 structured |
+|---|---|---|---|
+| Citation rate (n=10) | 0.800 | **1.000** | 1.000 |
+| Citation validity | 1.000 (n=8) | **1.000** (n=10) | 1.000 (n=10) |
+| Out-of-scope accuracy (n=2) | 0.500 | **1.000** | 1.000 |
+| In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 |
+
+Both of exp2's headline gains reproduce with **no change to the system at all**.
+q011 cites page 26 in the repeat run; q058 cites 59; q072 is recorded `refused`.
+On this evidence the correct statement is: *the difference between pilot-1 and
+exp2 is run-to-run variation, and the structured format's effect on these rates
+is unmeasured.*
+
+### Why the baseline is not reproducible
+
+The answer model runs at `temperature=0`, so this was unexpected. Checking the
+two runs directly:
+
+- **Retrieval was identical on 15 of 15 rows** — same chunk ids, same order.
+- **11 of 15 answers differed anyway.**
+
+So the nondeterminism is in generation, not retrieval. `temperature=0` does not
+make this hosted model reproducible. That has consequences beyond this
+experiment:
+
+- Any **answer-side** metric compared across single runs — citation rate, scope
+  accuracy, status, faithfulness — carries unknown run-to-run noise. One run per
+  configuration cannot separate an effect from that noise.
+- Any **retrieval-side** metric is still comparable, because retrieval *is*
+  deterministic. Experiment 1's conclusion stands: context recall and page hit
+  rate depend on the retrieved chunks and the fixed reference pages, not on the
+  generated answer.
+- Phase 2's "anecdotal repeatability" note (§4) described the *judge*, not the
+  answer model, and is unaffected — but it should not be read as evidence that
+  anything else in the pipeline repeats.
+
+### What does survive, on mechanism rather than measurement
+
+Structured mode makes the q072 failure **impossible by construction**, and that
+is a design argument, not a statistical one:
+
+- In text mode the status is inferred by matching the reply against two fixed
+  sentences. In `pilot-1-repeat` q072 was caught only because the model happened
+  to emit `REFUSAL_TEXT` **verbatim**. In pilot-1 it refused in its own words and
+  was recorded `answered`. Same configuration, opposite outcome, decided by
+  wording.
+- In structured mode the model reports its own status, so a correctly-refused
+  row cannot be recorded as answered regardless of phrasing.
+- The same holds for citations: the format requires `cited_pages` on an answered
+  reply, rather than hoping a `[p. N]` marker appears in prose.
+- Supporting this: **0 format fallbacks in 15 rows**, and citation validity
+  1.000 — the model did not invent pages when asked to list them.
+
+That is a reason to prefer structured mode. It is not a measured improvement in
+these rates, and this document should not be cited as one.
+
 ## 4. Judge reliability
 
-**Not computed: `data/human_labels.csv` is empty.** All ten `faithful` cells are
-blank — the file is byte-identical to the one generated in Part A (98 bytes),
-and no `yes`/`no` label exists anywhere in the repository. There is nothing to
-compare the judge against. Kappa,
-percent agreement, the confusion matrix and the disagreement list all need that
-file; the code and its tests are in place and the numbers follow in one command
-once the labels exist.
+### Human calibration: not performed
 
-This also leaves two failure types unassignable — see §5 and
-`docs/failure-taxonomy.md`.
+`data/human_labels.csv` was never filled in. It is byte-identical to the file
+generated in Part A (98 bytes, all ten `faithful` cells empty), and no `yes`/`no`
+label exists anywhere in the repository. Percent agreement, Cohen's kappa, the
+confusion matrix and the disagreement list are therefore **not computed** — not
+estimated, not approximated from the model's own reading of the answers.
 
-When it does run, the fixed decisions are already set and will not be tuned
-afterwards: a judge faithfulness score of **≥ 0.8 counts as "yes"**, rows with no
-judge verdict (q045 and q048, both truncated) are excluded and counted, and with
-roughly 8 usable rows **kappa will be indicative, not conclusive** — the
-disagreement list is the real evidence.
+The code and its tests are in place and unused, not deleted:
+`cohens_kappa()` and `confusion_matrix()` in `eval/deterministic_metrics.py`,
+with hand-worked tests covering perfect agreement, chance-level agreement, and
+the `pe = 1` case where kappa is undefined rather than 1.0.
+
+The decisions that would govern the comparison are fixed in advance and will not
+be tuned afterwards: a judge faithfulness score of **≥ 0.8 counts as "yes"**;
+rows with no judge verdict (`q045`, `q048`, both truncated) are excluded and
+counted; and with roughly 8 usable rows **kappa would be indicative, not
+conclusive** — the disagreement list would be the real evidence.
+
+Consequence: `q027` stays unassigned in the taxonomy, and the two
+judge-dependent failure types stay empty. See §5.
 
 ### Repeatability (anecdotal, not measured)
 
@@ -180,6 +252,13 @@ judge error, and only a human reading of the chunks separates them.
 - **The answer rate did not move** in either experiment: 10 of 11 in both.
 - **Judge variance was not measured** (see §4), so nothing here separates a real
   metric movement from judge noise on a single row.
+- **Experiment 2's measured gains did not survive a control run** (§3a). A
+  repeat of the unchanged baseline matched them exactly. The format's effect on
+  citation rate and scope accuracy is unmeasured, not demonstrated.
+- **The answer model is not reproducible at `temperature=0`** — 11 of 15 answers
+  changed between two identical runs while retrieval stayed identical. Every
+  single-run answer-side comparison in Phase 2 and Phase 3 inherits that
+  uncertainty, including pilot-1's own baseline numbers.
 - **Experiment 2's answers were never judged**, so its effect on faithfulness is
   unknown. It fixed two bookkeeping failures; it is not evidence that the
   answers got better.
@@ -206,6 +285,12 @@ judge error, and only a human reading of the chunks separates them.
    would also settle whether stating a status changes answer quality.
 5. **Finish the calibration** once `data/human_labels.csv` is filled: kappa,
    the disagreement list, and the two taxonomy types that depend on it.
-6. **Adopt structured answers**, which fixed both rows it targeted with zero
-   format fallbacks and no invented citations — the one change in this phase
-   with evidence behind it.
+6. **Repeat runs to measure answer variance.** The single most important gap
+   this phase exposed: with 11 of 15 answers changing between identical runs,
+   no answer-side experiment can be read from one run per configuration. Run
+   each configuration three to five times and report the spread, then re-test
+   Experiment 2 against that spread rather than against a single baseline.
+7. **Adopt structured answers on the mechanism argument** (§3a), not on the
+   rates: it removes a whole failure class — a correct refusal recorded as an
+   answer — by construction. Confirm the rate effect only after the variance
+   work in candidate 6.

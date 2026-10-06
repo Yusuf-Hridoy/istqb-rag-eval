@@ -1,0 +1,449 @@
+{
+  "rows_compared": 15,
+  "base_only_ids": [],
+  "new_only_ids": [],
+  "metrics": {
+    "context_precision": {
+      "base_mean": 0.7702,
+      "base_n": 11,
+      "new_mean": null,
+      "new_n": 0,
+      "delta": null
+    },
+    "context_recall": {
+      "base_mean": 0.7778,
+      "base_n": 11,
+      "new_mean": null,
+      "new_n": 0,
+      "delta": null
+    },
+    "faithfulness": {
+      "base_mean": 0.8406,
+      "base_n": 8,
+      "new_mean": null,
+      "new_n": 0,
+      "delta": null
+    },
+    "response_relevancy": {
+      "base_mean": 0.8692,
+      "base_n": 10,
+      "new_mean": null,
+      "new_n": 0,
+      "delta": null
+    }
+  },
+  "citation_rate": {
+    "base": {
+      "rate": 0.8,
+      "cited": 8,
+      "answered": 10,
+      "uncited_ids": [
+        "q011",
+        "q058"
+      ]
+    },
+    "new": {
+      "rate": 1.0,
+      "cited": 10,
+      "answered": 10,
+      "uncited_ids": []
+    }
+  },
+  "citation_validity": {
+    "base": {
+      "rate": 1.0,
+      "rows": 8,
+      "valid_pages": 12,
+      "total_pages": 12,
+      "invalid_ids": [],
+      "unknown_ids": [],
+      "note": ""
+    },
+    "new": {
+      "rate": 1.0,
+      "rows": 10,
+      "valid_pages": 13,
+      "total_pages": 13,
+      "invalid_ids": [],
+      "unknown_ids": [],
+      "note": ""
+    }
+  },
+  "out_of_scope_accuracy": {
+    "base": [
+      0.5,
+      2
+    ],
+    "new": [
+      1.0,
+      2
+    ]
+  },
+  "not_in_syllabus_accuracy": {
+    "base": [
+      1.0,
+      2
+    ],
+    "new": [
+      1.0,
+      2
+    ]
+  },
+  "answer_rate": {
+    "base": [
+      0.9091,
+      11
+    ],
+    "new": [
+      0.9091,
+      11
+    ]
+  },
+  "changed_rows": [
+    {
+      "id": "q001",
+      "multi_chunk": true,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 0.3333,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 0.8889,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.9772,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q007",
+      "multi_chunk": true,
+      "base_status": "no_context",
+      "new_status": "no_context",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 0.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 0.0,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q011",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 0.6667,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.8721,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q013",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 0.8333,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.9011,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q020",
+      "multi_chunk": true,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.9566,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q025",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 0.875,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.7354,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q027",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 0.6389,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 0.1,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.8869,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q030",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.8497,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q045",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.755,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q048",
+      "multi_chunk": true,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 1.0,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.8478,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q058",
+      "multi_chunk": true,
+      "base_status": "answered",
+      "new_status": "answered",
+      "status_changed": false,
+      "moved": {
+        "context_precision": {
+          "base": 0.5,
+          "new": null,
+          "delta": null
+        },
+        "context_recall": {
+          "base": 0.0,
+          "new": null,
+          "delta": null
+        },
+        "faithfulness": {
+          "base": 0.9167,
+          "new": null,
+          "delta": null
+        },
+        "response_relevancy": {
+          "base": 0.9098,
+          "new": null,
+          "delta": null
+        }
+      }
+    },
+    {
+      "id": "q072",
+      "multi_chunk": false,
+      "base_status": "answered",
+      "new_status": "refused",
+      "status_changed": true,
+      "moved": {}
+    }
+  ],
+  "direction": {
+    "context_precision": {
+      "higher": 0,
+      "lower": 0,
+      "unchanged": 0
+    },
+    "context_recall": {
+      "higher": 0,
+      "lower": 0,
+      "unchanged": 0
+    },
+    "faithfulness": {
+      "higher": 0,
+      "lower": 0,
+      "unchanged": 0
+    },
+    "response_relevancy": {
+      "higher": 0,
+      "lower": 0,
+      "unchanged": 0
+    }
+  },
+  "page_hit_rate": {
+    "base": {
+      "rate": 1.0,
+      "hits": 11,
+      "total": 11,
+      "missed_ids": []
+    },
+    "new": {
+      "rate": 1.0,
+      "hits": 11,
+      "total": 11,
+      "missed_ids": []
+    }
+  },
+  "base_run": "pilot-1",
+  "new_run": "pilot-1-repeat"
+}

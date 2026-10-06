@@ -170,25 +170,40 @@ variable each. Full numbers and the predictions written before either run:
 [docs/phase-3-findings.md](docs/phase-3-findings.md); per-row failure types:
 [docs/failure-taxonomy.md](docs/failure-taxonomy.md).
 
-| | pilot-1 | exp1 section chunking | exp2 structured answers |
-|---|---|---|---|
-| Context recall (n=11) | 0.778 | **0.667** | not re-judged |
-| Context recall, multi_chunk (n=5) | 0.578 | **0.400** | not re-judged |
-| Page hit rate (n=11) | 1.000 | **0.818** | 1.000 |
-| Citation rate (n=10 answered) | 0.800 | 1.000 | **1.000** |
-| Citation validity | 1.000 (n=8) | 1.000 (n=10) | **1.000** (n=10) |
-| Out-of-scope accuracy (n=2) | 0.500 | 1.000 | **1.000** |
-| In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 |
+| | pilot-1 | pilot-1-repeat (control) | exp1 section chunking | exp2 structured answers |
+|---|---|---|---|---|
+| Context recall (n=11) | 0.778 | not re-judged | **0.667** | not re-judged |
+| Context recall, multi_chunk (n=5) | 0.578 | not re-judged | **0.400** | not re-judged |
+| Page hit rate (n=11) | 1.000 | 1.000 | **0.818** | 1.000 |
+| Citation rate (n=10 answered) | 0.800 | 1.000 | 1.000 | 1.000 |
+| Citation validity | 1.000 (n=8) | 1.000 (n=10) | 1.000 (n=10) | 1.000 (n=10) |
+| Out-of-scope accuracy (n=2) | 0.500 | 1.000 | 1.000 | 1.000 |
+| In-scope answer rate (n=11) | 0.909 | 0.909 | 0.909 | 0.909 |
+
+`pilot-1-repeat` is the **pilot-1 configuration re-run unchanged**. It is in the
+table because it reproduces both of exp2's apparent gains without any change to
+the system.
 
 **Section chunking made retrieval worse** and did not fix q007, the
-seven-principles row it was built for. **Structured answers fixed both rows they
-targeted** — q011 now cites its pages, q072 is correctly recorded as a refusal —
-with zero format fallbacks and no invented citations. Citation validity is
-reported next to citation rate for exactly that reason: letting the model state
-its own pages could otherwise raise the rate by inventing them.
+seven-principles row it was built for. Retrieval is deterministic across runs,
+so that comparison holds.
+
+**Structured answers cannot be credited with the rate gains.** The control run
+reaches the same citation rate and out-of-scope accuracy with no change at all,
+so the difference from pilot-1 is run-to-run variation. The reason it varies:
+the answer model is **not reproducible at `temperature=0`** — between two
+identical runs, retrieval matched on 15 of 15 rows but **11 of 15 answers
+differed**. Every answer-side single-run comparison in this project inherits
+that uncertainty.
+
+What structured mode does change is mechanism rather than rate: the model
+reports its own status, so a correct refusal phrased in its own words can no
+longer be recorded as `answered` (0 format fallbacks in 15 rows, citation
+validity 1.000). That is a design argument for adopting it, not a measured
+improvement.
 
 Judge calls for the whole phase: **11**, all in exp1 (context recall only).
-Experiment 2 and every rate above are deterministic.
+Experiment 2, the control run, and every rate above are deterministic.
 
 Both are still **pilot, n=15**. Per-group figures rest on two to six rows, and
 exp2's answers were never re-judged, so its effect on faithfulness is unmeasured

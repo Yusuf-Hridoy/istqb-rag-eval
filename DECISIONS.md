@@ -495,3 +495,36 @@ result, which is counted and reported rather than hidden.
 `scores.csv` gained `retrieved_pages` and `format_fallback`, appended last so
 the join on `id` is unaffected. `retrieved_pages` holds page numbers only, never
 text, which is what lets page hit rate be computed from the committed file.
+
+## The answer model is not reproducible at temperature=0
+
+Phase 3 added a control run (`runs/pilot-1-repeat`) that re-ran the pilot-1
+configuration with nothing changed. It was meant to check whether Experiment 2's
+gains were real. It showed something larger:
+
+* **Retrieval is deterministic** — identical chunk ids, in identical order, on
+  15 of 15 rows.
+* **Generation is not** — 11 of 15 answers differed, despite
+  `ChatGroq(temperature=0)` in `pipeline._build_llm`.
+
+So `temperature=0` does not make this hosted model reproducible. The practical
+rule that follows, and that the findings now apply:
+
+| metric kind | comparable across single runs? |
+|---|---|
+| retrieval-side (context recall, page hit rate, retrieved pages) | yes — retrieval repeats exactly |
+| answer-side (citation rate, scope accuracy, status, faithfulness) | **no** — unknown run-to-run noise |
+
+Experiment 1's conclusion survives on that split, because context recall and
+page hit rate depend on the retrieved chunks and the fixed reference pages, not
+on the generated answer. Experiment 2's measured gains do not: a plain repeat of
+the baseline reproduced both of them.
+
+This also means pilot-1's own answer-side baseline numbers — citation rate
+0.800, out-of-scope accuracy 0.500 — are one sample, not a fixed property of the
+system. "Repeat runs to measure answer variance" is the first Phase 4 candidate
+for that reason.
+
+The judge is a separate question. It also runs at temperature 0, and Phase 2's
+repeated identical truncation of `q048` is consistent with repeatability, but
+that was never measured either and should not be inferred from this.
