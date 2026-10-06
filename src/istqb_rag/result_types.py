@@ -28,3 +28,6 @@ class RagResult:
     model: str
     latency_ms: dict[str, int]  # {"retrieve": .., "generate": .., "total": ..}
     error: str | None = None
+    # True when structured mode asked for JSON and got something unparseable,
+    # so this reply fell back to Phase 2's text matching. Never hidden.
+    format_fallback: bool = False

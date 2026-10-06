@@ -54,6 +54,8 @@ SCORES_COLUMNS = [
     "latency_ms",
     "possible_hallucination",
     "judge_truncated",
+    "retrieved_pages",
+    "format_fallback",
 ]
 
 _QUOTA_MARKERS = (
@@ -231,13 +233,19 @@ class JudgeCallCounter(BaseCallbackHandler):
         return f"{type(self.errors[0]).__name__}: {self.errors[0]}"[:300] if self.errors else None
 
 
-def metrics_for(row_type: str, status: str) -> list[str]:
-    """Which Ragas metrics a row gets, per the routing table."""
+def metrics_for(row_type: str, status: str, only: list[str] | None = None) -> list[str]:
+    """Which Ragas metrics a row gets, per the routing table.
+
+    ``only`` narrows the result to the named metrics, for runs that need one
+    cheap metric rather than the full set (Phase 3's judge budget).
+    """
     if row_type != "in_scope" or status == "error":
         return []
     metrics = list(RETRIEVAL_METRICS)
     if status == "answered":
         metrics += ANSWER_METRICS
+    if only is not None:
+        metrics = [m for m in metrics if m in only]
     return metrics
 
 
@@ -448,12 +456,67 @@ def _existing_scores(scores_path: Path) -> set[str]:
         return {row["id"] for row in csv.DictReader(f)}
 
 
+def write_judge_free_scores(
+    run_id: str,
+    rows: list[GoldenRow],
+    *,
+    settings: Settings | None = None,
+) -> dict:
+    """Write scores.csv with every judge-free column filled and metrics blank.
+
+    Used by `eval quick`, which answers Experiment 2's question entirely from
+    status, citations and fallbacks — none of which need a judge.
+    """
+    settings = settings or get_settings()
+    run_dir = settings.runs_dir / run_id
+    answers = _load_answers(run_dir / "answers.jsonl")
+    scores_path = run_dir / "scores.csv"
+
+    written: list[dict] = []
+    status_counts: dict[str, int] = {}
+    fallbacks = 0
+    with scores_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=SCORES_COLUMNS)
+        writer.writeheader()
+        for row in rows:
+            result = answers.get(row.id)
+            if result is None:
+                continue
+            _, flag = scope_verdict(row.type, result.status)
+            status_counts[result.status] = status_counts.get(result.status, 0) + 1
+            if getattr(result, "format_fallback", False):
+                fallbacks += 1
+            record = {
+                "id": row.id,
+                "type": row.type,
+                "chapter": row.chapter if row.chapter is not None else "",
+                "k_level": row.k_level or "",
+                "multi_chunk": str(row.multi_chunk).lower(),
+                "status": result.status,
+                "cited_pages": ";".join(str(p) for p in result.cited_pages),
+                "best_score": f"{max((c.score for c in result.contexts), default=0.0):.4f}",
+                "latency_ms": result.latency_ms["total"],
+                "possible_hallucination": flag,
+                "judge_truncated": "",
+                "retrieved_pages": ";".join(
+                    str(p) for p in dict.fromkeys(c.page for c in result.contexts)
+                ),
+                "format_fallback": "true" if getattr(result, "format_fallback", False) else "",
+            }
+            for key in METRIC_KEYS:
+                record[key] = ""
+            writer.writerow(record)
+            written.append({**record, "multi_chunk": row.multi_chunk})
+    return {"rows": written, "status_counts": status_counts, "format_fallbacks": fallbacks}
+
+
 def run_score(
     run_id: str,
     rows: list[GoldenRow],
     scorer: ScorerFn,
     *,
     settings: Settings | None = None,
+    only_metrics: list[str] | None = None,
 ) -> dict[str, int]:
     """Score every answered row, appending each scores.csv line immediately.
 
@@ -483,7 +546,7 @@ def run_score(
             result = answers.get(row.id)
             if result is None:
                 continue
-            metrics = metrics_for(row.type, result.status)
+            metrics = metrics_for(row.type, result.status, only=only_metrics)
             # Out-of-scope and not-in-syllabus rows are judged by the routing
             # table alone, so judge quota cannot affect them. Keep scoring them
             # after a quota stop, or scope accuracy would be unmeasurable on any
@@ -524,6 +587,12 @@ def run_score(
                 "latency_ms": result.latency_ms["total"],
                 "possible_hallucination": flag,
                 "judge_truncated": "true" if outcome.truncated else "",
+                # pages only, never text: lets page hit rate be computed from the
+                # committed file instead of the gitignored answers.jsonl
+                "retrieved_pages": ";".join(
+                    str(p) for p in dict.fromkeys(c.page for c in result.contexts)
+                ),
+                "format_fallback": "true" if getattr(result, "format_fallback", False) else "",
             }
             for key in METRIC_KEYS:
                 value = outcome.values.get(key, math.nan)

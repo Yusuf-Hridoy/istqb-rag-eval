@@ -45,6 +45,8 @@ class Settings:
     collection_name: str
     judge_model: str
     judge_max_tokens: int
+    chunking: str
+    answer_format: str
     golden_path: Path
     runs_dir: Path
 
@@ -72,6 +74,20 @@ def get_settings() -> Settings:
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
         judge_model=_str("JUDGE_MODEL", "qwen/qwen3.8-27b"),
         judge_max_tokens=_int("JUDGE_MAX_TOKENS", 950),
+        # Phase 3 switches. Both defaults reproduce the Phase 2 baseline exactly.
+        chunking=_str("CHUNKING", "page"),
+        answer_format=_str("ANSWER_FORMAT", "text"),
         golden_path=_path("GOLDEN_PATH", "data/golden_dataset.jsonl"),
         runs_dir=_path("RUNS_DIR", "runs"),
     )
+
+
+def active_collection(settings: Settings) -> str:
+    """Which Chroma collection this chunking mode uses.
+
+    Section chunking writes to its own collection so the Phase 2 baseline
+    collection is never touched and pilot-1 stays reproducible.
+    """
+    if settings.chunking == "section":
+        return f"{settings.collection_name}_section"
+    return settings.collection_name

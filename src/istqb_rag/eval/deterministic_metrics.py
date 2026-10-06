@@ -1,0 +1,117 @@
+"""Metrics that need no judge: citation rate, page hit rate, and Cohen's kappa.
+
+Every number here is computed from data already on disk, so it costs nothing and
+is identical on every rerun. Phase 3's judge budget is 15 calls for the whole
+phase, so anything a deterministic check can answer is answered here instead.
+"""
+
+import math
+
+
+def citation_rate(rows: list[dict]) -> dict:
+    """Share of answered in-scope rows that cite at least one page.
+
+    Works on an old scores.csv too: the column has always been ``cited_pages``,
+    so pilot-1 can be measured retroactively without being re-run.
+    """
+    answered = [r for r in rows if r["type"] == "in_scope" and r["status"] == "answered"]
+    cited = [r for r in answered if str(r.get("cited_pages", "")).strip()]
+    return {
+        "rate": round(len(cited) / len(answered), 4) if answered else None,
+        "cited": len(cited),
+        "answered": len(answered),
+        "uncited_ids": [r["id"] for r in answered if not str(r.get("cited_pages", "")).strip()],
+    }
+
+
+def _pages(value: object) -> set[int]:
+    """Parse a ';'-separated page cell into a set of ints."""
+    if not value:
+        return set()
+    if isinstance(value, (list, tuple, set)):
+        return {int(p) for p in value}
+    return {int(p) for p in str(value).split(";") if p.strip().isdigit()}
+
+
+def page_hit_rate(rows: list[dict], reference_pages: dict[str, list[int]]) -> dict:
+    """Share of in-scope rows where a retrieved page is one of the reference pages.
+
+    This is the free counterpart to context recall: it asks whether retrieval
+    reached the right part of the syllabus at all, without asking a judge
+    whether the text supports the answer.
+    """
+    scored = [
+        r
+        for r in rows
+        if r["type"] == "in_scope" and r["status"] != "error" and r["id"] in reference_pages
+    ]
+    hits, misses = 0, []
+    for row in scored:
+        wanted = set(reference_pages[row["id"]])
+        got = _pages(row.get("retrieved_pages"))
+        if got & wanted:
+            hits += 1
+        else:
+            misses.append(row["id"])
+    return {
+        "rate": round(hits / len(scored), 4) if scored else None,
+        "hits": hits,
+        "total": len(scored),
+        "missed_ids": misses,
+    }
+
+
+def cohens_kappa(pairs: list[tuple[str, str]]) -> dict:
+    """Cohen's kappa for two raters over the same items.
+
+    kappa = (po - pe) / (1 - pe), computed by hand rather than pulling in
+    scikit-learn for five lines of arithmetic.
+
+    When both raters give every item the same single label, pe is 1 and the
+    formula divides by zero. Kappa is undefined there — agreement carries no
+    information if there was never a choice to disagree about — so ``kappa`` is
+    None rather than 0 or 1.
+    """
+    n = len(pairs)
+    if n == 0:
+        return {"n": 0, "percent_agreement": None, "kappa": None, "note": "no overlapping rows"}
+
+    agreed = sum(1 for a, b in pairs if a == b)
+    po = agreed / n
+
+    labels = {label for pair in pairs for label in pair}
+    pe = 0.0
+    for label in labels:
+        pe += (sum(1 for a, _ in pairs if a == label) / n) * (
+            sum(1 for _, b in pairs if b == label) / n
+        )
+
+    if math.isclose(pe, 1.0):
+        return {
+            "n": n,
+            "percent_agreement": round(po, 4),
+            "kappa": None,
+            "note": "kappa undefined: both raters used a single label (pe = 1)",
+        }
+    return {
+        "n": n,
+        "percent_agreement": round(po, 4),
+        "kappa": round((po - pe) / (1 - pe), 4),
+        "expected_agreement": round(pe, 4),
+        "note": "",
+    }
+
+
+def confusion_matrix(pairs: list[tuple[str, str]]) -> dict:
+    """2x2 counts for yes/no pairs, as (human, judge)."""
+    counts = {"both_yes": 0, "both_no": 0, "human_yes_judge_no": 0, "human_no_judge_yes": 0}
+    for human, judge in pairs:
+        if human == "yes" and judge == "yes":
+            counts["both_yes"] += 1
+        elif human == "no" and judge == "no":
+            counts["both_no"] += 1
+        elif human == "yes":
+            counts["human_yes_judge_no"] += 1
+        else:
+            counts["human_no_judge_yes"] += 1
+    return counts

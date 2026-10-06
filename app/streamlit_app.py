@@ -319,6 +319,117 @@ def render_chat_tab(settings) -> None:
         st.rerun()  # re-render so the new reply gets its score button
 
 
+# --- Compare runs -----------------------------------------------------------
+
+
+def render_compare_tab(settings) -> None:
+    """Two runs side by side. All logic lives in compare_runs.py."""
+    from istqb_rag.eval.compare_runs import compare, reference_pages_from_golden
+    from istqb_rag.eval.step3_build_summary import load_scores
+
+    runs = _list_runs(settings)
+    if len(runs) < 2:
+        st.info("Two runs with a scores.csv are needed to compare. Run another experiment first.")
+        return
+
+    left, right = st.columns(2)
+    base_id = left.selectbox("Base run", runs, index=min(1, len(runs) - 1))
+    new_id = right.selectbox("New run", runs, index=0)
+    if base_id == new_id:
+        st.warning("Pick two different runs.")
+        return
+
+    base_rows = load_scores(settings.runs_dir / base_id / "scores.csv")
+    new_rows = load_scores(settings.runs_dir / new_id / "scores.csv")
+    data = compare(base_rows, new_rows, reference_pages_from_golden(settings.golden_path))
+    st.caption(f"{data['rows_compared']} rows joined on id")
+
+    st.caption("Metric means")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "metric": METRIC_LABELS[key],
+                    f"{base_id} (n)": f"{m['base_mean']:.3f} ({m['base_n']})"
+                    if m["base_mean"] is not None
+                    else "—",
+                    f"{new_id} (n)": f"{m['new_mean']:.3f} ({m['new_n']})"
+                    if m["new_mean"] is not None
+                    else "—",
+                    "delta": f"{m['delta']:+.3f}" if m["delta"] is not None else "—",
+                }
+                for key, m in data["metrics"].items()
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    rates = [
+        (
+            "Citation rate",
+            data["citation_rate"]["base"]["rate"],
+            data["citation_rate"]["new"]["rate"],
+        ),
+        (
+            "Out-of-scope accuracy",
+            data["out_of_scope_accuracy"]["base"][0],
+            data["out_of_scope_accuracy"]["new"][0],
+        ),
+        ("Answer rate", data["answer_rate"]["base"][0], data["answer_rate"]["new"][0]),
+    ]
+    if "page_hit_rate" in data:
+        rates.append(
+            (
+                "Page hit rate",
+                data["page_hit_rate"]["base"]["rate"],
+                data["page_hit_rate"]["new"]["rate"],
+            )
+        )
+    st.caption("Deterministic rates")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "measure": name,
+                    base_id: "—" if b is None else f"{b:.3f}",
+                    new_id: "—" if n is None else f"{n:.3f}",
+                }
+                for name, b, n in rates
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.caption("Rows that changed status or moved by more than 0.2")
+    if not data["changed_rows"]:
+        st.caption("No row changed.")
+        return
+    questions = _load_questions(str(settings.golden_path))
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "id": row["id"],
+                    "question": questions.get(row["id"], ""),
+                    "multi_chunk": row["multi_chunk"],
+                    "status": f"{row['base_status']} -> {row['new_status']}"
+                    if row["status_changed"]
+                    else row["base_status"],
+                    **{
+                        METRIC_LABELS[k]: f"{v['base']} -> {v['new']}"
+                        for k, v in row["moved"].items()
+                    },
+                }
+                for row in data["changed_rows"]
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 def main() -> None:
     st.set_page_config(page_title="ISTQB CTFL Assistant", layout="wide")
     st.title("ISTQB CTFL Assistant")
@@ -335,9 +446,11 @@ def main() -> None:
             st.session_state.pop("pending_question", None)
             st.rerun()
 
-    chat_tab, eval_tab = st.tabs(["Chat", "Eval dashboard"])
+    chat_tab, eval_tab, compare_tab = st.tabs(["Chat", "Eval dashboard", "Compare runs"])
     with eval_tab:
         render_eval_tab(settings)
+    with compare_tab:
+        render_compare_tab(settings)
     with chat_tab:
         render_chat_tab(settings)
 

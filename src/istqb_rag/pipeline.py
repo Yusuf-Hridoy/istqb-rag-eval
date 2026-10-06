@@ -14,8 +14,9 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_groq import ChatGroq
 
 from istqb_rag import prompts
-from istqb_rag.config import Settings, get_settings
+from istqb_rag.config import Settings, active_collection, get_settings
 from istqb_rag.result_types import RagResult, RetrievedChunk
+from istqb_rag.structured_answer import parse_structured_reply
 
 _CITATION_RE = re.compile(r"[\[【]p\.\s*(\d+)[\]】]")
 _QUOTES = "\"'“”‘’«»"
@@ -59,7 +60,7 @@ def _build_llm(settings: Settings) -> BaseChatModel:
 def _build_store(settings: Settings) -> Chroma:
     return Chroma(
         persist_directory=str(settings.chroma_dir),
-        collection_name=settings.collection_name,
+        collection_name=active_collection(settings),
         embedding_function=FastEmbedEmbeddings(model_name=settings.embed_model),
     )
 
@@ -146,28 +147,48 @@ def answer(
         )
 
     # 3. Generate
+    structured = settings.answer_format == "structured"
+    if structured:
+        system = prompts.STRUCTURED_SYSTEM_PROMPT.format(context=prompts.format_context(contexts))
+        generator = llm.bind(response_format={"type": "json_object"})
+    else:
+        system = prompts.SYSTEM_PROMPT.format(
+            refusal=prompts.REFUSAL_TEXT,
+            not_found=prompts.NOT_FOUND_TEXT,
+            context=prompts.format_context(contexts),
+        )
+        generator = llm
+
     t_generate = time.perf_counter()
     try:
-        reply = llm.invoke(
-            [
-                (
-                    "system",
-                    prompts.SYSTEM_PROMPT.format(
-                        refusal=prompts.REFUSAL_TEXT,
-                        not_found=prompts.NOT_FOUND_TEXT,
-                        context=prompts.format_context(contexts),
-                    ),
-                ),
-                ("human", question),
-            ]
-        ).content.strip()
+        reply = generator.invoke([("system", system), ("human", question)]).content.strip()
     except Exception as exc:
         return _error_result(
             question, model, _ms(t0), exc, retrieve_ms=retrieve_ms, contexts=contexts
         )
     generate_ms = _ms(t_generate)
 
-    # 4. Map status from the fixed texts (normalized comparison)
+    # 4. Status: the model states it in structured mode, otherwise it is inferred
+    #    from the two fixed texts (the Phase 2 behaviour).
+    fallback = False
+    if structured:
+        parsed = parse_structured_reply(reply)
+        if parsed is not None:
+            return RagResult(
+                question=question,
+                status=parsed.status,
+                answer=parsed.answer,
+                contexts=contexts,
+                cited_pages=parsed.cited_pages,
+                model=model,
+                latency_ms={
+                    "retrieve": retrieve_ms,
+                    "generate": generate_ms,
+                    "total": _ms(t0),
+                },
+            )
+        fallback = True  # unusable JSON: fall through to text matching, and say so
+
     normalized = _normalize(reply)
     if normalized == _REFUSAL_NORMALIZED:
         status = "refused"
@@ -184,6 +205,7 @@ def answer(
         cited_pages=parse_cited_pages(reply),
         model=model,
         latency_ms={"retrieve": retrieve_ms, "generate": generate_ms, "total": _ms(t0)},
+        format_fallback=fallback,
     )
 
 

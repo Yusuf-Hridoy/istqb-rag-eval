@@ -55,6 +55,8 @@ def make_settings(**overrides) -> Settings:
         collection_name="test",
         judge_model="fake-judge",
         judge_max_tokens=800,
+        chunking="page",
+        answer_format="text",
         golden_path=Path("data/golden_dataset.jsonl"),
         runs_dir=Path("runs-test"),
     )

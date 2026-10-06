@@ -450,3 +450,48 @@ the gap is visible rather than silently averaged away.
 `scores.csv` gained a `judge_truncated` column, appended last so Phase 3's join
 on `id` is unaffected. Rows written before the column existed read as not
 truncated, which is correct for them.
+
+## Phase 3: heading detection needed more than the brief's regex
+
+The brief specifies headings as `^\d+(\.\d+){1,2}\s+[A-Z]` and warns that fewer
+than 40 sections means detection failed. On this PDF that regex finds **21** —
+below the brief's own failure threshold — because only top-level headings put
+the number and title on one line:
+
+    "1.1  What is Testing?"       <- matches
+    "1.1.1. " / "Test Objectives" <- number and title on separate lines
+
+So `find_headings()` matches both shapes. Two further problems surfaced while
+building it, both found by checking the store rather than trusting the count:
+
+* **The header/footer stripper was eating the numbering.** `remove_repeated_lines`
+  normalises digit runs before counting, so every bare subsection number
+  ("5.1.1.", "6.2.1.") collapses to the same `#.#.#.` string, appears on most
+  pages, and was removed as boilerplate — taking the subsection headings with
+  it. Section mode now passes a `protect` predicate that exempts bare section
+  numbers. Page mode passes none and is therefore byte-identical to Phase 2,
+  which a test pins.
+* **Chapter contents pages duplicate the numbers.** "1.3" appears both on the
+  chapter's contents page and at the real section, which produced duplicate
+  `chunk_id`s and a bogus section whose body was a list of titles. For each
+  section id the occurrence with the most text under it is kept.
+
+Result: 79 distinct sections, 178 chunks, no duplicate ids, and section 1.3
+holds all seven testing principles in one place — which is the q007 case
+Experiment 1 exists to test.
+
+## Phase 3: switches and where they write
+
+`CHUNKING=page|section` and `ANSWER_FORMAT=text|structured`, both defaulting to
+the Phase 2 behaviour. Section chunking writes to its own collection
+(`ctfl_v4_section`, via `active_collection()`), so the baseline collection and
+`runs/pilot-1` are never touched and the pilot stays reproducible.
+
+Structured mode asks the answer model for JSON and takes the status and
+citations the model states, instead of inferring both from prose. Unparseable
+JSON falls back to Phase 2's text matching and sets `format_fallback` on the
+result, which is counted and reported rather than hidden.
+
+`scores.csv` gained `retrieved_pages` and `format_fallback`, appended last so
+the join on `id` is unaffected. `retrieved_pages` holds page numbers only, never
+text, which is what lets page hit rate be computed from the committed file.

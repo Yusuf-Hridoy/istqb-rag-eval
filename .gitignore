@@ -19,3 +19,6 @@ build/
 # Eval run artifacts: full answers contain syllabus text
 runs/*/answers.jsonl
 runs/dry-run*/
+
+# The labelling sheet quotes retrieved chunks, i.e. syllabus text
+data/human_labeling_sheet.md
