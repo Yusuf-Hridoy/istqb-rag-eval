@@ -1,4 +1,4 @@
-"""Stage 1 of the eval: generate answers for every dataset row.
+"""Eval step 1: ask the bot every question in the dataset and save its answers.
 
 Each RagResult is appended to the run's answers.jsonl as soon as it returns;
 rerunning skips rows already present, so a crash or rate limit never loses
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from istqb_rag.config import Settings, get_settings
 from istqb_rag.eval.dataset import GoldenRow
-from istqb_rag.models import RagResult
+from istqb_rag.result_types import RagResult
 
 AnswerFn = Callable[[str], RagResult]
 

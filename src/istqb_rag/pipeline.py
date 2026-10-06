@@ -15,7 +15,7 @@ from langchain_groq import ChatGroq
 
 from istqb_rag import prompts
 from istqb_rag.config import Settings, get_settings
-from istqb_rag.models import RagResult, RetrievedChunk
+from istqb_rag.result_types import RagResult, RetrievedChunk
 
 _CITATION_RE = re.compile(r"[\[【]p\.\s*(\d+)[\]】]")
 _QUOTES = "\"'“”‘’«»"

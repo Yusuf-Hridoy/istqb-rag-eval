@@ -65,6 +65,39 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+## Project map
+
+| Path | What it is for |
+|---|---|
+| `src/istqb_rag/config.py` | Reads settings from `.env` (models, chunk size, `TOP_K`, paths). |
+| `src/istqb_rag/ingest.py` | Turns the syllabus PDF into chunks and loads them into the Chroma store. |
+| `src/istqb_rag/pipeline.py` | The RAG pipeline itself: `answer(question)` retrieves, generates and cites. |
+| `src/istqb_rag/prompts.py` | Every prompt and fixed reply, kept in one place. |
+| `src/istqb_rag/result_types.py` | The result objects passed around: `RetrievedChunk` and `RagResult`. |
+| `src/istqb_rag/cli.py` | Ask one question from the terminal. |
+| `src/istqb_rag/eval/dataset.py` | Loads and validates the golden dataset, and checks its mix. |
+| `src/istqb_rag/eval/step1_ask_questions.py` | Eval step 1 — ask every dataset question, save the answers. |
+| `src/istqb_rag/eval/step2_judge_scores.py` | Eval step 2 — the judge scores those saved answers. |
+| `src/istqb_rag/eval/step3_build_summary.py` | Eval step 3 — add the scores up into `summary.json` and a console table. |
+| `src/istqb_rag/eval/__main__.py` | The `generate` / `score` / `report` / `all` / `measure` commands. Keeps this name because `python -m istqb_rag.eval` requires it. |
+| `app/streamlit_app.py` | The web UI: chat tab plus the eval dashboard. |
+| `data/golden_dataset.jsonl` | The 75 evaluation questions with their reference answers. |
+| `data/raw/`, `data/processed/` | The syllabus PDF and extracted page text. Both gitignored — syllabus text is never committed. |
+| `runs/pilot-1/` | The real pilot baseline run (n=15). |
+| `runs/example-fake-data/` | Invented numbers so the dashboard renders on a fresh clone. Not a measurement. |
+| `runs/<id>/config.json` | What the run used: models, `TOP_K`, chunk size, dataset checksum. |
+| `runs/<id>/scores.csv` | One line per question: ids, status and scores. No question, answer or syllabus text. |
+| `runs/<id>/summary.json` | The aggregated results the README table and dashboard read. |
+| `runs/<id>/answers.jsonl` | Full answers including syllabus text. Gitignored, never committed. |
+| `docs/dataset-review.md` | The per-row record of checking the pilot questions against the syllabus. |
+| `docs/phase-2-findings.md` | What the pilot baseline showed, with the numbers behind each finding. |
+| `DECISIONS.md` | Why things are the way they are, including what was measured rather than assumed. |
+| `tests/conftest.py` | Shared fakes for the offline tests. Keeps this name because pytest requires it. |
+| `scripts/smoke_test_phase_1.py` | The Phase 1 manual smoke test. |
+
+`conftest.py` and `__main__.py` keep their names because pytest and Python
+respectively require them; everything else is named for what it does.
+
 ## Evaluation
 
 Phase 2 measures the Phase 1 pipeline exactly as it is — no prompt, chunking or
@@ -80,7 +113,7 @@ not-in-syllabus row that was answered is flagged as a possible hallucination.
 
 **Golden dataset:** LLM-drafted and LLM-verified against the syllabus pages
 (see [docs/dataset-review.md](docs/dataset-review.md)); rows a human has checked
-are marked `reviewed_by: human`. `data/golden.jsonl` holds 75 rows; the first
+are marked `reviewed_by: human`. `data/golden_dataset.jsonl` holds 75 rows; the first
 baseline runs on the 15 marked `"pilot": true`. The run refuses to start with
 fewer than `MIN_REVIEWED_ROWS` reviewed rows.
 

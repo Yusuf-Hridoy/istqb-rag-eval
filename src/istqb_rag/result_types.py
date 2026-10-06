@@ -1,4 +1,4 @@
-"""Data contracts shared across ingestion, the pipeline, the CLI and the UI.
+"""The result objects every part of the app passes around: RetrievedChunk and RagResult.
 
 Phase 2's Ragas runner reads ``question``, ``answer`` and ``contexts[].text``
 directly — do not rename those fields.

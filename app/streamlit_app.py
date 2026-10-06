@@ -13,8 +13,8 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from istqb_rag.config import get_settings  # noqa: E402
-from istqb_rag.eval.report import MIN_GROUP_N  # noqa: E402
-from istqb_rag.eval.score import METRIC_KEYS  # noqa: E402
+from istqb_rag.eval.step2_judge_scores import METRIC_KEYS  # noqa: E402
+from istqb_rag.eval.step3_build_summary import MIN_GROUP_N  # noqa: E402
 from istqb_rag.pipeline import answer  # noqa: E402
 
 EXAMPLE_QUESTIONS = [
@@ -225,8 +225,8 @@ def _judge_available(settings) -> bool:
 
 @st.cache_resource
 def get_scorer():
-    """One Ragas scorer for the whole session, reused from score.py."""
-    from istqb_rag.eval.score import make_scorer
+    """One Ragas scorer for the whole session, reused from step2_judge_scores.py."""
+    from istqb_rag.eval.step2_judge_scores import make_scorer
 
     return make_scorer()
 

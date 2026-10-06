@@ -1,4 +1,4 @@
-"""Stage 3 of the eval: aggregate scores.csv into summary.json + a console table."""
+"""Eval step 3: add the scores up into summary.json and print a readable table."""
 
 import csv
 import json
@@ -7,7 +7,7 @@ import statistics
 from pathlib import Path
 
 from istqb_rag.config import Settings, get_settings
-from istqb_rag.eval.score import METRIC_KEYS, metrics_for
+from istqb_rag.eval.step2_judge_scores import METRIC_KEYS, metrics_for
 
 ERROR_RATE_LIMIT = 0.05
 NAN_RATE_LIMIT = 0.10

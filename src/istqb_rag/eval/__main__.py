@@ -10,9 +10,9 @@ uv run python -m istqb_rag.eval measure  --run-id baseline   # cost of one row
 import argparse
 import sys
 
-from istqb_rag.eval import generate as generate_mod
-from istqb_rag.eval import report as report_mod
-from istqb_rag.eval import score as score_mod
+from istqb_rag.eval import step1_ask_questions as generate_mod
+from istqb_rag.eval import step2_judge_scores as score_mod
+from istqb_rag.eval import step3_build_summary as report_mod
 from istqb_rag.eval.dataset import DatasetError, load_golden
 
 MIN_REVIEWED_ROWS = 15  # pilot baseline; the full 75 rows stay in the file
@@ -27,7 +27,7 @@ def _load_rows(args) -> list:
     if len(rows) < MIN_REVIEWED_ROWS:
         sys.exit(
             f"Refusing to run: only {len(rows)} reviewed rows "
-            f"(minimum {MIN_REVIEWED_ROWS}). Review more rows in data/golden.jsonl."
+            f"(minimum {MIN_REVIEWED_ROWS}). Review more rows in data/golden_dataset.jsonl."
         )
     return rows
 
@@ -35,7 +35,7 @@ def _load_rows(args) -> list:
 def _measure(args) -> None:
     """Score one real answered in-scope row and print what it cost."""
     from istqb_rag.config import get_settings
-    from istqb_rag.eval.score import _load_answers, metrics_for
+    from istqb_rag.eval.step2_judge_scores import _load_answers, metrics_for
 
     settings = get_settings()
     rows = load_golden(include_unreviewed=True)

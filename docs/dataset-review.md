@@ -1,6 +1,6 @@
 # Dataset review — pilot rows (n=15)
 
-Each of the 15 rows marked `"pilot": true` in `data/golden.jsonl` was checked
+Each of the 15 rows marked `"pilot": true` in `data/golden_dataset.jsonl` was checked
 against the syllabus pages named in its `reference_pages`. Checked: that the
 question reads like a learner's and shares no 8-word run with the syllabus text;
 that the reference is correct and complete for those pages; that the pages are
@@ -41,5 +41,5 @@ exceeds 60 words.
 - 9 rows passed unchanged.
 - No `reference_pages` needed correcting; the four multi-page rows (q007, q027,
   q048, q058) already spanned the right pages.
-- The other 60 rows in `data/golden.jsonl` were not touched and remain
+- The other 60 rows in `data/golden_dataset.jsonl` were not touched and remain
   `"reviewed": false`.

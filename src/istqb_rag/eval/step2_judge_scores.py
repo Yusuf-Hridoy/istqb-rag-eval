@@ -1,4 +1,4 @@
-"""Stage 2 of the eval: score saved answers with Ragas and an LLM judge.
+"""Eval step 2: have the judge model score the saved answers, and record the scores.
 
 Two stages exist so answers are generated once and can be re-scored later
 (Phase 3's judge-variance check depends on it).
@@ -32,7 +32,7 @@ from langchain_core.embeddings import Embeddings
 
 from istqb_rag.config import Settings, get_settings
 from istqb_rag.eval.dataset import GoldenRow
-from istqb_rag.models import RagResult, RetrievedChunk
+from istqb_rag.result_types import RagResult, RetrievedChunk
 
 METRIC_KEYS = ["context_precision", "context_recall", "faithfulness", "response_relevancy"]
 RETRIEVAL_METRICS = ["context_precision", "context_recall"]

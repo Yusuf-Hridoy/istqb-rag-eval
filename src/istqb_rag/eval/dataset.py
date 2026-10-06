@@ -1,6 +1,6 @@
 """Golden dataset loading and validation.
 
-data/golden.jsonl holds one JSON object per line: questions and short
+data/golden_dataset.jsonl holds one JSON object per line: questions and short
 paraphrased reference answers only — never copied syllabus passages.
 """
 
@@ -37,7 +37,7 @@ REQUIRED_KEYS = {
 
 
 class DatasetError(ValueError):
-    """Raised when data/golden.jsonl fails validation."""
+    """Raised when data/golden_dataset.jsonl fails validation."""
 
 
 # The mix the Phase 2 brief specifies. The dataset is the product of this
@@ -65,7 +65,7 @@ class GoldenRow:
 
 
 def _fail(lineno: int, msg: str) -> DatasetError:
-    return DatasetError(f"golden.jsonl line {lineno}: {msg}")
+    return DatasetError(f"golden_dataset.jsonl line {lineno}: {msg}")
 
 
 def _validate_row(raw: object, lineno: int) -> GoldenRow:
@@ -178,7 +178,7 @@ def check_mix(rows: list[GoldenRow]) -> None:
         problems.append(f"chapter {chapter}: unexpected chapter with {chapters[chapter]} rows")
     if problems:
         raise DatasetError(
-            'golden.jsonl does not match the brief\'s mix (source="llm" rows only):\n  '
+            'golden_dataset.jsonl does not match the brief\'s mix (source="llm" rows only):\n  '
             + "\n  ".join(problems)
         )
 

@@ -27,7 +27,7 @@ def _row(**overrides):
 
 
 def _write(tmp_path, rows):
-    path = tmp_path / "golden.jsonl"
+    path = tmp_path / "golden_dataset.jsonl"
     path.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
     return path
 
@@ -172,7 +172,7 @@ def test_the_real_golden_file_matches_the_brief():
     """The committed dataset itself must satisfy the mix."""
     from pathlib import Path
 
-    path = Path(__file__).resolve().parents[1] / "data" / "golden.jsonl"
+    path = Path(__file__).resolve().parents[1] / "data" / "golden_dataset.jsonl"
     rows = load_golden(path, include_unreviewed=True)
     types, chapters = dataset_counts(rows)
     assert len(rows) == 75
@@ -214,7 +214,7 @@ def test_the_real_golden_file_has_the_agreed_pilot_subset():
     from collections import Counter
     from pathlib import Path
 
-    path = Path(__file__).resolve().parents[1] / "data" / "golden.jsonl"
+    path = Path(__file__).resolve().parents[1] / "data" / "golden_dataset.jsonl"
     rows = load_golden(path, include_unreviewed=True)
     pilot = [r for r in rows if r.pilot]
     assert len(pilot) == 15

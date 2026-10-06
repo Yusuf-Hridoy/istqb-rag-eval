@@ -6,16 +6,8 @@ import math
 import pytest
 
 from istqb_rag.eval.dataset import GoldenRow
-from istqb_rag.eval.generate import run_generate
-from istqb_rag.eval.report import (
-    MIN_GROUP_N,
-    NAN_RATE_LIMIT,
-    RunInvalid,
-    build_summary,
-    failed_nan_metrics,
-    run_report,
-)
-from istqb_rag.eval.score import (
+from istqb_rag.eval.step1_ask_questions import run_generate
+from istqb_rag.eval.step2_judge_scores import (
     METRIC_KEYS,
     SCORES_COLUMNS,
     JudgeQuotaExhausted,
@@ -27,7 +19,15 @@ from istqb_rag.eval.score import (
     run_score,
     scope_verdict,
 )
-from istqb_rag.models import RagResult, RetrievedChunk
+from istqb_rag.eval.step3_build_summary import (
+    MIN_GROUP_N,
+    NAN_RATE_LIMIT,
+    RunInvalid,
+    build_summary,
+    failed_nan_metrics,
+    run_report,
+)
+from istqb_rag.result_types import RagResult, RetrievedChunk
 from tests.conftest import make_settings
 
 

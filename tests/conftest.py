@@ -54,7 +54,7 @@ def make_settings(**overrides) -> Settings:
         chroma_dir=Path(".chroma-test"),
         collection_name="test",
         judge_model="fake-judge",
-        golden_path=Path("data/golden.jsonl"),
+        golden_path=Path("data/golden_dataset.jsonl"),
         runs_dir=Path("runs-test"),
     )
     values.update(overrides)

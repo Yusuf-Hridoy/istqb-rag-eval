@@ -157,7 +157,7 @@ rather than an error, so they are worth recording.
    `EmbeddingUsageEvent` with `getattr(embeddings, "model", None)` and pydantic
    requires a string, but `FastEmbedEmbeddings.model` is a `TextEmbedding`
    object. The ValidationError turned every embedding-backed metric into NaN.
-   `_FastEmbedForRagas` in `eval/score.py` wraps it and exposes `.model` as the
+   `_FastEmbedForRagas` in `eval/step2_judge_scores.py` wraps it and exposes `.model` as the
    model-name string.
 
 Ragas 0.4.3 also warns that importing from `ragas.metrics` is deprecated and
@@ -229,7 +229,7 @@ have been judged — previously an out-of-scope row counted as four NaNs.
 
 ## Golden dataset assembly
 
-`data/golden.jsonl` holds all 75 rows, ids `q001`–`q075`, ordered in_scope
+`data/golden_dataset.jsonl` holds all 75 rows, ids `q001`–`q075`, ordered in_scope
 (by chapter, then section) then not_in_syllabus then out_of_scope. The earlier
 per-chapter drafts under `data/processed/` were deleted: that directory is
 gitignored, so a dataset left there would never have been committed.
@@ -254,21 +254,21 @@ shares an 8-word run with the syllabus text, and no reference exceeds 60 words.
 The dashboard reads only committed artifacts — `config.json`, `summary.json`,
 `scores.csv` — so it works on a fresh clone with no API keys and no
 `answers.jsonl`. Question text for the Worst 10 table is joined from
-`data/golden.jsonl` by id, because `scores.csv` deliberately carries no text.
+`data/golden_dataset.jsonl` by id, because `scores.csv` deliberately carries no text.
 
-`runs/fixture/` exists so the dashboard has something to render before any real
+`runs/example-fake-data/` exists so the dashboard has something to render before any real
 run. Its numbers are invented, its `config.json` sets `"fixture": true`, and
 the dashboard shows a warning banner on any run carrying that flag. It must
 never be read as a measurement.
 
 The chat tab's "Score this answer" button calls the same `make_scorer()` from
-`eval/score.py` rather than re-creating the Ragas setup. With no reference
+`eval/step2_judge_scores.py` rather than re-creating the Ragas setup. With no reference
 answer it can only compute faithfulness and response relevancy, which the
 caption says; the button is hidden when no judge API key is configured.
 
 ## Pilot baseline: n=15 by user choice
 
-The full 75-row dataset stays in `data/golden.jsonl`; the first baseline runs on
+The full 75-row dataset stays in `data/golden_dataset.jsonl`; the first baseline runs on
 a 15-row subset marked `"pilot": true`. The remaining 60 rows are kept for later
 runs, so this is a staging decision, not a reduction of the dataset.
 
@@ -297,7 +297,7 @@ and leaves the thin groups out of the bar charts, naming them underneath
 instead. Thin groups keep their means — they are marked, not dropped, because
 hiding them would be its own kind of dishonesty.
 
-`runs/fixture/` was rebuilt pilot-shaped (15 rows) so the dashboard demonstrates
+`runs/example-fake-data/` was rebuilt pilot-shaped (15 rows) so the dashboard demonstrates
 this path on a fresh clone. Its numbers remain invented.
 
 ## check_mix counts only LLM-drafted rows
@@ -352,3 +352,30 @@ was rewritten as plausible social engineering.
 `"reviewed": true` must name a reviewer, so the provenance of a reviewed row can
 never be silent. The README states the dataset is LLM-verified and that
 human-checked rows would carry `reviewed_by: human`; no row carries that yet.
+
+## File names say what the file does
+
+A readability pass, no behaviour change. Renamed with `git mv` so history
+follows:
+
+| was | is | why |
+|---|---|---|
+| `src/istqb_rag/models.py` | `result_types.py` | "models" reads as ML models here, which is exactly wrong — the file holds result dataclasses. |
+| `eval/generate.py` | `eval/step1_ask_questions.py` | The three eval stages now say their order and their job. |
+| `eval/score.py` | `eval/step2_judge_scores.py` | |
+| `eval/report.py` | `eval/step3_build_summary.py` | |
+| `data/golden.jsonl` | `data/golden_dataset.jsonl` | "golden" alone does not say it is the dataset. |
+| `runs/fixture/` | `runs/example-fake-data/` | "fixture" is jargon; the new name says the numbers are invented. |
+
+The CLI subcommands are deliberately unchanged — `generate`, `score`, `report`,
+`all`, `measure` — so documented commands and the `runs/` layout keep working.
+Internal aliases in `eval/__main__.py` still read `generate_mod` / `score_mod` /
+`report_mod` to match those subcommand names.
+
+`conftest.py` and `__main__.py` keep their names because pytest and Python
+require them; the README's project map notes this so the inconsistency does not
+look accidental.
+
+Resume was verified after the rename: `runs/pilot-1/` still reports 13 rows
+already scored and would judge only `q048` and `q058`, and the generate stage
+re-asks nothing.
