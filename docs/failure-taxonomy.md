@@ -69,4 +69,4 @@ unchanged baseline** (`runs/pilot-1-repeat`). Both `missing_citation` and
 `status_mislabel` therefore clear without any change to the system, and the
 format cannot be credited for the counts. What the format does change is that
 `status_mislabel` becomes impossible by construction rather than dependent on
-the model's wording. See §3a of `docs/phase-3-findings.md`.
+the model's wording. See the control run in [findings.md](findings.md).

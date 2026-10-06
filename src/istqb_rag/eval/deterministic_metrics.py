@@ -167,33 +167,3 @@ def confusion_matrix(pairs: list[tuple[str, str]]) -> dict:
         else:
             counts["human_no_judge_yes"] += 1
     return counts
-
-
-def backfill_retrieved_pages(rows: list[dict], answers_path) -> list[dict]:
-    """Fill in retrieved_pages from a run's answers.jsonl when the column predates it.
-
-    pilot-1 was scored before scores.csv carried retrieved pages. The answers
-    file still has them, so the run can be measured retroactively without being
-    re-run or rewritten. Rows are copied, never mutated in place.
-    """
-    import json
-    from pathlib import Path
-
-    path = Path(answers_path)
-    if not path.exists():
-        return rows
-    pages_by_id = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        record = json.loads(line)
-        contexts = record.get("result", {}).get("contexts", [])
-        pages_by_id[record["id"]] = ";".join(
-            str(p) for p in dict.fromkeys(c["page"] for c in contexts)
-        )
-    out = []
-    for row in rows:
-        if not str(row.get("retrieved_pages") or "").strip() and row["id"] in pages_by_id:
-            row = {**row, "retrieved_pages": pages_by_id[row["id"]]}
-        out.append(row)
-    return out

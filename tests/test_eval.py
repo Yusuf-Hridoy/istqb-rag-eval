@@ -624,3 +624,52 @@ def test_counter_flags_a_reply_the_cap_cut_short():
     assert not counter.truncated
     counter.on_llm_end(_Resp())
     assert counter.truncated
+
+
+# --- New runs must be self-contained ---------------------------------------
+
+
+def test_run_score_writes_the_columns_published_tables_need(tmp_path):
+    """retrieved_pages, format_fallback and answer_sha256 are written natively.
+
+    Published tables read only committed files, so a new run must carry these
+    without any backfill from the gitignored answers.jsonl.
+    """
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001")]
+    run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
+    run_score(
+        "test-run",
+        rows,
+        lambda *a: ScoreOutcome(values=dict.fromkeys(a[-1], 0.5)),
+        settings=settings,
+    )
+
+    saved = _read_scores(settings, "test-run")[0]
+    assert saved["retrieved_pages"] == "17"
+    assert saved["answer_sha256"] and len(saved["answer_sha256"]) == 64
+    assert saved["format_fallback"] == ""  # text mode: no fallback
+
+
+def test_quick_report_writes_the_same_columns(tmp_path):
+    """The judge-free writer must match, since exp2 and the repeats use it."""
+    from istqb_rag.eval.step2_judge_scores import write_judge_free_scores
+
+    settings = make_settings(runs_dir=tmp_path / "runs")
+    rows = [_row("q001")]
+    run_generate("quick-run", rows, lambda q: _result(row_id=q), settings=settings)
+    write_judge_free_scores("quick-run", rows, settings=settings)
+
+    saved = _read_scores(settings, "quick-run")[0]
+    assert saved["retrieved_pages"] == "17"
+    assert len(saved["answer_sha256"]) == 64
+    assert list(saved.keys()) == SCORES_COLUMNS
+
+
+def test_answer_digest_is_stable_and_text_free():
+    from istqb_rag.eval.step2_judge_scores import answer_digest
+
+    assert answer_digest("hello") == answer_digest(" hello ")  # trimmed
+    assert answer_digest("hello") != answer_digest("world")
+    assert answer_digest(None) == answer_digest("")
+    assert "hello" not in answer_digest("hello")  # a hash, never the text

@@ -151,11 +151,6 @@ def render_eval_tab(settings) -> None:
     run_id = st.selectbox("Run", runs, index=0)
     summary, config, scores = _load_run(str(settings.runs_dir), run_id)
 
-    if config.get("fixture"):
-        st.warning(
-            "This is the **fixture** run: invented numbers so the dashboard renders "
-            "on a fresh clone. It is not a real measurement."
-        )
     st.caption(
         f"answer: {config.get('answer_model', '?')} · judge: {config.get('judge_model', '?')} · "
         f"{config.get('row_count', len(scores))} rows · {str(config.get('timestamp', ''))[:10]}"
