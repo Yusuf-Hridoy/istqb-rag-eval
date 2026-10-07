@@ -84,6 +84,7 @@ _TOO_LARGE_MARKERS = (
 DAILY_WAIT_THRESHOLD_S = 300.0
 MAX_ROW_ATTEMPTS = 4
 MAX_SLEEP_S = 90.0
+JUDGE_TIMEOUT_S = 180
 
 
 class JudgeQuotaExhausted(RuntimeError):
@@ -392,7 +393,7 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
     answer_relevancy.strictness = 1
     # max_workers=1: one row's ~11k tokens already exceeds the judge's
     # per-minute token bucket, so parallel rows only cause 429s.
-    run_config = RunConfig(max_workers=1, max_retries=3, timeout=180)
+    run_config = RunConfig(max_workers=1, max_retries=3, timeout=JUDGE_TIMEOUT_S)
     ragas_metrics = {
         "context_precision": context_precision,
         "context_recall": context_recall,

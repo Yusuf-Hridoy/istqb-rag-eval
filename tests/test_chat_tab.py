@@ -104,3 +104,62 @@ def test_score_caption_is_one_line(app):
 def test_score_caption_handles_a_missing_metric(app):
     caption = app.score_caption({"faithfulness": 1.0})
     assert "faithfulness 1.00" in caption and "relevance —" in caption
+
+
+# --- Judge label ------------------------------------------------------------
+
+THRESHOLD = 0.80
+
+
+def test_both_scores_above_threshold_is_ok(app):
+    verdict = app.judge_verdict({"faithfulness": 0.95, "response_relevancy": 0.91}, THRESHOLD)
+    assert verdict["label"] == "OK" and verdict["ok"] is True
+    assert verdict["missing"] == []
+
+
+def test_exactly_at_the_threshold_is_ok(app):
+    """'at or above' — 0.80 passes."""
+    verdict = app.judge_verdict({"faithfulness": 0.80, "response_relevancy": 0.80}, THRESHOLD)
+    assert verdict["label"] == "OK" and verdict["ok"] is True
+
+
+def test_just_below_the_threshold_is_check(app):
+    verdict = app.judge_verdict({"faithfulness": 0.79, "response_relevancy": 0.99}, THRESHOLD)
+    assert verdict["label"] == "Check this answer" and verdict["ok"] is False
+
+
+def test_either_score_below_threshold_is_check(app):
+    low_relevance = app.judge_verdict({"faithfulness": 1.0, "response_relevancy": 0.5}, THRESHOLD)
+    low_faith = app.judge_verdict({"faithfulness": 0.5, "response_relevancy": 1.0}, THRESHOLD)
+    assert low_relevance["ok"] is False and low_faith["ok"] is False
+
+
+def test_a_missing_score_is_check_and_names_what_is_missing(app):
+    verdict = app.judge_verdict({"response_relevancy": 0.99}, THRESHOLD)
+    assert verdict["label"] == "Check this answer" and verdict["ok"] is False
+    assert verdict["missing"] == ["faithfulness"]
+
+
+def test_a_missing_score_never_passes_even_when_the_other_is_perfect(app):
+    verdict = app.judge_verdict({"faithfulness": 1.0, "response_relevancy": None}, THRESHOLD)
+    assert verdict["ok"] is False
+    assert verdict["missing"] == ["relevance"]
+
+
+def test_both_scores_missing_names_both(app):
+    verdict = app.judge_verdict({}, THRESHOLD)
+    assert verdict["missing"] == ["faithfulness", "relevance"]
+    assert verdict["ok"] is False
+
+
+def test_the_label_is_never_a_failure_word(app):
+    for values in ({"faithfulness": 0.1, "response_relevancy": 0.1}, {}):
+        label = app.judge_verdict(values, THRESHOLD)["label"]
+        assert label == "Check this answer"
+        assert "fail" not in label.lower() and "not ok" not in label.lower()
+
+
+def test_the_threshold_is_configurable(app):
+    values = {"faithfulness": 0.85, "response_relevancy": 0.85}
+    assert app.judge_verdict(values, 0.80)["ok"] is True
+    assert app.judge_verdict(values, 0.90)["ok"] is False

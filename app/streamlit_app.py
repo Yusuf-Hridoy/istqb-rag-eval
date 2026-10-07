@@ -74,6 +74,29 @@ def cited_chunks(contexts, cited_pages):
     return [c for c in contexts if c.page in cited]
 
 
+# The two scores a reference-free judge can produce, and what each one means.
+SCORE_MEANINGS = (
+    ("faithfulness", "faithfulness", "Every claim is backed by the source"),
+    ("response_relevancy", "relevance", "The answer addresses the question"),
+)
+OK_LABEL = "OK"
+CHECK_LABEL = "Check this answer"
+
+
+def judge_verdict(values: dict, threshold: float) -> dict:
+    """Turn two judge scores into a label a reader can act on.
+
+    "Check this answer" rather than "Fail": the judge is itself a model, and a
+    low score means read the answer against its source, not that the answer is
+    wrong. A missing score is also a reason to check, never a pass.
+    """
+    missing = [label for key, label, _ in SCORE_MEANINGS if values.get(key) is None]
+    if missing:
+        return {"label": CHECK_LABEL, "ok": False, "missing": missing}
+    ok = all(values[key] >= threshold for key, _, _ in SCORE_MEANINGS)
+    return {"label": OK_LABEL if ok else CHECK_LABEL, "ok": ok, "missing": []}
+
+
 def score_caption(values: dict) -> str:
     """One line: the two scores a reference-free judge can produce."""
 
@@ -114,7 +137,34 @@ def _render_score(result, settings) -> None:
     if outcome.api_error:
         st.caption(f"Judge call failed: {outcome.api_error}")
         return
-    st.caption(score_caption(outcome.values))
+    _render_judge_box(outcome.values, settings.score_ok_threshold)
+
+
+def _render_judge_box(values: dict, threshold: float) -> None:
+    """The Judge box: a label, both scores with their meaning, and a caveat.
+
+    Colour is never the only signal — the label is always written out.
+    """
+    verdict = judge_verdict(values, threshold)
+    lines = [f"**Judge: {verdict['label']}**", ""]
+    for key, label, meaning in SCORE_MEANINGS:
+        value = values.get(key)
+        shown = "not scored" if value is None else f"{value:.2f}"
+        lines.append(f"- {label} {shown} — {meaning}")
+    if verdict["missing"]:
+        lines.append("")
+        lines.append(
+            "The judge's reply was cut off, so "
+            + " and ".join(verdict["missing"])
+            + (" was" if len(verdict["missing"]) == 1 else " were")
+            + " not scored."
+        )
+    box = st.info if verdict["ok"] else st.warning  # blue for OK, orange for Check
+    box("\n".join(lines))
+    st.caption(
+        f"OK: both scores at or above {threshold:.2f} · "
+        "Check: read it against its source. The judge is an AI and can be wrong."
+    )
 
 
 def _render_result(result) -> None:

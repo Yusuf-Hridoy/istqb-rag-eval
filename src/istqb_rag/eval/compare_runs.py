@@ -24,7 +24,7 @@ MOVE_THRESHOLD = 0.2
 
 
 def _mean(rows: list[dict], key: str) -> tuple[float | None, int]:
-    values = [r[key] for r in rows if not math.isnan(r[key])]
+    values = [r[key] for r in rows if not math.isnan(r.get(key, math.nan))]
     return (round(sum(values) / len(values), 4) if values else None, len(values))
 
 
@@ -76,20 +76,17 @@ def compare(
         before, after = base[row_id], new[row_id]
         moved = {}
         for key in METRIC_KEYS:
-            if math.isnan(before[key]) and math.isnan(after[key]):
+            was, now = before.get(key, math.nan), after.get(key, math.nan)
+            if math.isnan(was) and math.isnan(now):
                 continue
-            if math.isnan(before[key]) or math.isnan(after[key]):
+            if math.isnan(was) or math.isnan(now):
                 moved[key] = {
-                    "base": None if math.isnan(before[key]) else before[key],
-                    "new": None if math.isnan(after[key]) else after[key],
+                    "base": None if math.isnan(was) else was,
+                    "new": None if math.isnan(now) else now,
                     "delta": None,
                 }
-            elif abs(after[key] - before[key]) > MOVE_THRESHOLD:
-                moved[key] = {
-                    "base": before[key],
-                    "new": after[key],
-                    "delta": round(after[key] - before[key], 4),
-                }
+            elif abs(now - was) > MOVE_THRESHOLD:
+                moved[key] = {"base": was, "new": now, "delta": round(now - was, 4)}
         status_changed = before["status"] != after["status"]
         if moved or status_changed:
             changed_rows.append(
@@ -107,7 +104,8 @@ def compare(
     for key in METRIC_KEYS:
         better = worse = same = 0
         for row_id in shared:
-            b, a = base[row_id][key], new[row_id][key]
+            b = base[row_id].get(key, math.nan)
+            a = new[row_id].get(key, math.nan)
             if math.isnan(b) or math.isnan(a):
                 continue
             if a > b:

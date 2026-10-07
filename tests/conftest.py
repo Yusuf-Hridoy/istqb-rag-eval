@@ -57,6 +57,7 @@ def make_settings(**overrides) -> Settings:
         judge_max_tokens=800,
         chunking="page",
         prompt_version=2,
+        score_ok_threshold=0.80,
         answer_format="text",
         golden_path=Path("data/golden_dataset.jsonl"),
         runs_dir=Path("runs-test"),

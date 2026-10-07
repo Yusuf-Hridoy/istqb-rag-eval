@@ -266,6 +266,12 @@ def main() -> None:
             rows = load_golden(include_unreviewed=True)
             only = [m.strip() for m in args.metrics.split(",")] if args.metrics else None
             if only:
+                unknown = [m for m in only if m not in score_mod.METRIC_KEYS]
+                if unknown:
+                    sys.exit(
+                        f"Unknown metric(s): {', '.join(unknown)}. "
+                        f"Choose from: {', '.join(score_mod.METRIC_KEYS)}."
+                    )
                 print(f"Scoring only: {', '.join(only)}")
             scorer = score_mod.make_scorer()
             stats = score_mod.run_score(args.run_id, rows, scorer, only_metrics=only)

@@ -444,7 +444,7 @@ def test_unmeasured_metric_never_invalidates_a_run():
 
 
 def test_measured_none_keeps_the_old_behaviour():
-    """pilot-1 has no metrics_scored recorded, so every metric is still judged."""
+    """With no metrics_scored recorded, every metric is still treated as judged."""
     from istqb_rag.eval.step3_build_summary import build_summary
 
     rows = [_scores_row("q1", cr=0.8)]

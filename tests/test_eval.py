@@ -241,7 +241,8 @@ def _write_scores(path, rows):
             out = dict(row)
             out["multi_chunk"] = str(out["multi_chunk"]).lower()
             for key in METRIC_KEYS:
-                out[key] = "" if math.isnan(out[key]) else f"{out[key]:.4f}"
+                value = out.get(key, math.nan)
+                out[key] = "" if math.isnan(value) else f"{value:.4f}"
             writer.writerow(out)
 
 

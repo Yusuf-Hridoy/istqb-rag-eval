@@ -146,7 +146,9 @@ def build_comparison(base_id: str, new_id: str, data: dict, questions: dict) -> 
     ]
     for key in METRIC_KEYS:
         label, _ = METRIC_MEANING[key]
-        m = data["metrics"][key]
+        m = data["metrics"].get(key)
+        if m is None:  # a comparison made before this metric existed
+            continue
 
         def cell(mean, n):
             return "not measured" if mean is None else f"{mean:.2f} (n={n})"

@@ -174,6 +174,12 @@ silently produced NaN: the dataframe column is named after the metric object
 its telemetry needs a string `.model` on the embeddings object, which FastEmbed
 lacks — a thin wrapper supplies one.
 
+**Tried Ragas noise sensitivity, then dropped it.**
+Measured on one question: ~11 judge calls, ~17k tokens and ~5 minutes. Too
+costly for a free-tier judge budget of 200k tokens a day, so the metric was
+removed rather than left half-run. No score is reported — one question is not a
+result.
+
 **`max_workers=1` for the judge.**
 One row's ~11k tokens already exceeds the per-minute budget, so parallel rows
 only cause 429s.

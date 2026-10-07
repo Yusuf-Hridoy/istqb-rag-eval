@@ -75,8 +75,8 @@ def _metric_stats(rows: list[dict], measured: list[str] | None = None) -> dict:
             }
             continue
         expected = [r for r in rows if _expects(r, key)]
-        values = [r[key] for r in expected if not math.isnan(r[key])]
-        missing = [r for r in expected if math.isnan(r[key])]
+        values = [r[key] for r in expected if not math.isnan(r.get(key, math.nan))]
+        missing = [r for r in expected if math.isnan(r.get(key, math.nan))]
         # A verdict our own JUDGE_MAX_TOKENS cut short is a known configuration
         # artifact with a named fix; only an unexplained unreadable verdict is a
         # parse failure, and only those feed the validity guard.
@@ -120,11 +120,11 @@ def _grouped(rows: list[dict], field: str, measured: list[str] | None = None) ->
 
 def _worst_rows(rows: list[dict], n: int = WORST_N) -> list[dict]:
     def avg(row: dict) -> float:
-        values = [row[k] for k in METRIC_KEYS if not math.isnan(row[k])]
+        values = [row[k] for k in METRIC_KEYS if not math.isnan(row.get(k, math.nan))]
         return sum(values) / len(values) if values else math.inf
 
     def _value(row: dict, key: str):
-        return None if math.isnan(row[key]) else row[key]
+        return None if math.isnan(row.get(key, math.nan)) else row[key]
 
     in_scope = [r for r in rows if r["type"] == "in_scope" and r["status"] != "error"]
     worst = sorted(in_scope, key=avg)[:n]

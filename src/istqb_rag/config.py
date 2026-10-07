@@ -47,6 +47,7 @@ class Settings:
     judge_max_tokens: int
     chunking: str
     prompt_version: int
+    score_ok_threshold: float
     answer_format: str
     golden_path: Path
     runs_dir: Path
@@ -78,6 +79,7 @@ def get_settings() -> Settings:
         # Phase 3 switches. Both defaults reproduce the Phase 2 baseline exactly.
         chunking=_str("CHUNKING", "page"),
         prompt_version=_int("PROMPT_VERSION", 2),
+        score_ok_threshold=_float("SCORE_OK_THRESHOLD", 0.80),
         answer_format=_str("ANSWER_FORMAT", "structured"),
         golden_path=_path("GOLDEN_PATH", "data/golden_dataset.jsonl"),
         runs_dir=_path("RUNS_DIR", "runs"),
