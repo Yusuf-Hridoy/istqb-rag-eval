@@ -159,37 +159,53 @@ and citations, because the model states them instead of having them inferred.
 
 ## Failure taxonomy
 
-Eight of the 15 baseline rows failed something. Full table with per-row
-evidence: [failure-taxonomy.md](failure-taxonomy.md).
+A row counts as failed if any metric is below 0.7, its status is wrong for its
+type, it was answered with no citation, or its judge verdict is missing. Eight
+of the 15 baseline rows failed something. Each gets exactly one **primary**
+type — the thing that would have to be fixed first.
 
-| type | rows | count |
-|---|---|---|
-| `retrieval_miss` | q007, q058 | 2 |
-| `ranking_noise` | q001 | 1 |
-| `missing_citation` | q011 | 1 |
-| `status_mislabel` | q072 | 1 |
-| `judge_truncated` | q045, q048 | 2 |
-| unassigned | q027 | 1 |
+| id | type | evidence | targeted by |
+|---|---|---|---|
+| q007 | `retrieval_miss` | Reference pages 17–18; retrieval returned 17, 14, 14, 48 — the page holding six of the seven principles was never retrieved. Context recall 0.000. | Experiment 1 |
+| q058 | `retrieval_miss` | Reference pages 59–60; retrieval returned 22, 59, 16, 22. Context recall 0.000, precision 0.500. | Experiment 1 |
+| q001 | `ranking_noise` | Reference page 15 **was** retrieved (48, 18, 15, 48) and recall is 0.889, but two of four chunks are page 48. Context precision 0.333. | Experiment 1 |
+| q011 | `missing_citation` | Answered with `cited_pages` empty. Recall 0.667 is the secondary issue; the citation is the one a reader would notice. | Experiment 2 |
+| q072 | `status_mislabel` | Replied *"I'm sorry, but I can't provide that."* — a correct refusal — but recorded `answered`, because status was matched against two fixed sentences. | Experiment 2 |
+| q045 | `judge_truncated` | `judge_truncated: true`; the faithfulness verdict hit `finish_reason: length`. Retrieval was perfect (precision 1.0, recall 1.0). | neither |
+| q048 | `judge_truncated` | `judge_truncated: true`, same cause. Precision 1.0, recall 1.0. | neither |
+| q027 | **unassigned** | Faithfulness 0.100 on an answer that cites the correct pages (39, 40) and retrieved them. Either `unfaithful_answer` or `judge_error`; the two are told apart only by a human label. | — |
+
+| type | count |
+|---|---|
+| `retrieval_miss` | 2 |
+| `ranking_noise` | 1 |
+| `missing_citation` | 1 |
+| `status_mislabel` | 1 |
+| `judge_truncated` | 2 |
+| `unfaithful_answer` | not yet assignable |
+| `judge_error` | not yet assignable |
+| unassigned (q027) | 1 |
+| **total failed rows** | **8 of 15** |
 
 `unfaithful_answer` and `judge_error` are empty because they are separated by
 exactly one piece of evidence — whether a human, reading only the retrieved
-chunks, agrees with the judge — and `data/human_labels.csv` was never filled in.
-q027 hangs on this: faithfulness 0.100 on an answer that cites the correct pages
-and retrieved them.
+chunks, agrees with the judge — and no human calibration was performed. q027 is
+the row that hangs on it. The other seven rows carry types that depend on no
+judgement at all — retrieved pages, recorded status, citation presence and the
+truncation flag are all facts on disk — so those are final. q027's answer also
+differs between `pilot-1` and `pilot-1-repeat`, so a future label must be taken
+against a specific run's answer and chunks, not against "the" answer.
 
-Section chunking cleared neither `retrieval_miss`. Structured answers cleared
-both rows they targeted, but so did the unchanged control run, so the format
-cannot be credited for the counts.
+Section chunking cleared neither `retrieval_miss`: q007 and q058 both still have
+context recall 0.000, and q001 got worse. Structured answers cleared both rows
+they targeted, but so did the unchanged control run, so the format cannot be
+credited for the counts — what it does change is that `status_mislabel` becomes
+impossible by construction.
 
 ## Judge reliability
 
-**Human calibration: not performed.** `data/human_labels.csv` was never filled
-in, so percent agreement, Cohen's kappa, the confusion matrix and the
-disagreement list are not computed. The code and its hand-worked tests are in
-place, unused. The decisions that would govern the comparison are fixed in
-advance: a judge faithfulness score of **≥ 0.8 counts as "yes"**, rows with no
-judge verdict are excluded and counted, and with roughly 8 usable rows kappa
-would be indicative rather than conclusive.
+**Human calibration: not performed.** No answers were labelled by hand, so
+judge-vs-human agreement is unknown.
 
 **Judge variance: not measured.** The judge runs at temperature 0 and `q048`'s
 verdict truncated identically on every one of three attempts, which is
@@ -197,8 +213,8 @@ consistent with repeatable output but does not measure it.
 
 ## What is still open
 
-1. **Human calibration** — fill `data/human_labels.csv`, which also settles
-   q027's failure type.
+1. **Human calibration of the judge** — label ~10 answers and compare with
+   judge faithfulness; this also settles q027's failure type.
 2. **A longer-context embedding model.** `bge-small-en-v1.5` has a 512-token
    window, so an unsplit section would be truncated at embedding time. Whole-
    section chunking needs a different embedding model, not just a flag.

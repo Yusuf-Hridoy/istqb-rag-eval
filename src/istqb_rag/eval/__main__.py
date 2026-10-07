@@ -4,10 +4,8 @@ uv run python -m istqb_rag.eval generate --run-id baseline
 uv run python -m istqb_rag.eval score    --run-id baseline
 uv run python -m istqb_rag.eval report   --run-id baseline
 uv run python -m istqb_rag.eval all      --run-id baseline
-uv run python -m istqb_rag.eval measure  --run-id baseline   # cost of one row
 uv run python -m istqb_rag.eval quick    --run-id exp2       # generate + judge-free report
 uv run python -m istqb_rag.eval compare  --base pilot-1 --new exp1
-uv run python -m istqb_rag.eval labelsheet --run-id pilot-1  # human labelling sheet
 uv run python -m istqb_rag.eval variance --text <ids> --structured <ids>
 uv run python -m istqb_rag.eval readme-tables                 # regenerate README results
 """
@@ -35,56 +33,6 @@ def _load_rows(args) -> list:
             f"(minimum {MIN_REVIEWED_ROWS}). Review more rows in data/golden_dataset.jsonl."
         )
     return rows
-
-
-def _measure(args) -> None:
-    """Score one real answered in-scope row and print what it cost."""
-    from istqb_rag.config import get_settings
-    from istqb_rag.eval.step2_judge_scores import _load_answers, metrics_for
-
-    settings = get_settings()
-    rows = load_golden(include_unreviewed=True)
-    answers = _load_answers(settings.runs_dir / args.run_id / "answers.jsonl")
-    target = next(
-        (
-            r
-            for r in rows
-            if r.type == "in_scope" and r.id in answers and answers[r.id].status == "answered"
-        ),
-        None,
-    )
-    if target is None:
-        sys.exit(f"No answered in-scope row found in runs/{args.run_id}/answers.jsonl.")
-
-    result = answers[target.id]
-    metrics = metrics_for(target.type, result.status)
-    scorer = score_mod.make_scorer()
-    print(f"Measuring {target.id} with metrics {metrics} …")
-    outcome = scorer(
-        target.question,
-        result.answer,
-        target.reference,
-        [c.text for c in result.contexts],
-        metrics,
-    )
-    print(f"\n=== Judge cost for one row ({target.id}) ===")
-    print(f"judge calls:       {outcome.calls}")
-    print(f"prompt tokens:     {outcome.prompt_tokens}")
-    print(f"completion tokens: {outcome.completion_tokens}")
-    print(f"scores:            {outcome.values}")
-    if outcome.api_error:
-        print(f"api error:         {outcome.api_error}")
-    print(f"\nAt {outcome.calls} calls/row, a 60-row baseline needs ~{outcome.calls * 60} calls.")
-
-
-def _labelsheet(args) -> None:
-    """Write the (gitignored) reading sheet and the empty labels file."""
-    from istqb_rag.eval.human_labeling_sheet import write_sheet_and_labels
-
-    rows = load_golden(include_unreviewed=True)
-    sheet, labels, n = write_sheet_and_labels(args.run_id, rows)
-    print(f"Wrote {sheet} ({n} answered in-scope rows) — gitignored, contains syllabus text.")
-    print(f"Wrote {labels} — fill the 'faithful' column with yes/no.")
 
 
 def _quick(args) -> None:
@@ -182,7 +130,7 @@ def _variance(args) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(prog="istqb_rag.eval")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("generate", "score", "report", "all", "measure", "quick", "labelsheet"):
+    for name in ("generate", "score", "report", "all", "quick"):
         p = sub.add_parser(name)
         p.add_argument("--run-id", required=True)
         p.add_argument(
@@ -239,14 +187,6 @@ def main() -> None:
                 settings=settings,
                 reference_pages=reference_pages_from_golden(settings.golden_path),
             )
-            return
-
-        if args.command == "measure":
-            _measure(args)
-            return
-
-        if args.command == "labelsheet":
-            _labelsheet(args)
             return
 
         if args.command == "quick":

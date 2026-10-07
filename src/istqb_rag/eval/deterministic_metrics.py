@@ -1,11 +1,9 @@
-"""Metrics that need no judge: citation rate, page hit rate, and Cohen's kappa.
+"""Metrics that need no judge: citation rate, citation validity and page hit rate.
 
 Every number here is computed from data already on disk, so it costs nothing and
 is identical on every rerun. Phase 3's judge budget is 15 calls for the whole
 phase, so anything a deterministic check can answer is answered here instead.
 """
-
-import math
 
 
 def citation_rate(rows: list[dict]) -> dict:
@@ -111,59 +109,3 @@ def page_hit_rate(rows: list[dict], reference_pages: dict[str, list[int]]) -> di
         "total": len(scored),
         "missed_ids": misses,
     }
-
-
-def cohens_kappa(pairs: list[tuple[str, str]]) -> dict:
-    """Cohen's kappa for two raters over the same items.
-
-    kappa = (po - pe) / (1 - pe), computed by hand rather than pulling in
-    scikit-learn for five lines of arithmetic.
-
-    When both raters give every item the same single label, pe is 1 and the
-    formula divides by zero. Kappa is undefined there — agreement carries no
-    information if there was never a choice to disagree about — so ``kappa`` is
-    None rather than 0 or 1.
-    """
-    n = len(pairs)
-    if n == 0:
-        return {"n": 0, "percent_agreement": None, "kappa": None, "note": "no overlapping rows"}
-
-    agreed = sum(1 for a, b in pairs if a == b)
-    po = agreed / n
-
-    labels = {label for pair in pairs for label in pair}
-    pe = 0.0
-    for label in labels:
-        pe += (sum(1 for a, _ in pairs if a == label) / n) * (
-            sum(1 for _, b in pairs if b == label) / n
-        )
-
-    if math.isclose(pe, 1.0):
-        return {
-            "n": n,
-            "percent_agreement": round(po, 4),
-            "kappa": None,
-            "note": "kappa undefined: both raters used a single label (pe = 1)",
-        }
-    return {
-        "n": n,
-        "percent_agreement": round(po, 4),
-        "kappa": round((po - pe) / (1 - pe), 4),
-        "expected_agreement": round(pe, 4),
-        "note": "",
-    }
-
-
-def confusion_matrix(pairs: list[tuple[str, str]]) -> dict:
-    """2x2 counts for yes/no pairs, as (human, judge)."""
-    counts = {"both_yes": 0, "both_no": 0, "human_yes_judge_no": 0, "human_no_judge_yes": 0}
-    for human, judge in pairs:
-        if human == "yes" and judge == "yes":
-            counts["both_yes"] += 1
-        elif human == "no" and judge == "no":
-            counts["both_no"] += 1
-        elif human == "yes":
-            counts["human_yes_judge_no"] += 1
-        else:
-            counts["human_no_judge_yes"] += 1
-    return counts

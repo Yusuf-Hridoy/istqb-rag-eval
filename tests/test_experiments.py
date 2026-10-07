@@ -11,8 +11,6 @@ from istqb_rag.eval.compare_runs import compare
 from istqb_rag.eval.deterministic_metrics import (
     citation_rate,
     citation_validity,
-    cohens_kappa,
-    confusion_matrix,
     page_hit_rate,
 )
 from istqb_rag.eval.step2_judge_scores import metrics_for
@@ -280,56 +278,6 @@ def test_only_metrics_narrows_what_the_judge_scores():
     assert metrics_for("out_of_scope", "refused", only=["context_recall"]) == []
     # unrestricted behaviour is unchanged
     assert len(metrics_for("in_scope", "answered")) == 4
-
-
-# --- Cohen's kappa ----------------------------------------------------------
-
-
-def test_kappa_perfect_agreement():
-    pairs = [("yes", "yes"), ("no", "no"), ("yes", "yes"), ("no", "no")]
-    result = cohens_kappa(pairs)
-    assert result["percent_agreement"] == 1.0
-    assert result["kappa"] == 1.0
-
-
-def test_kappa_chance_level_agreement_is_zero():
-    # po = 0.5, and each rater says yes half the time, so pe = 0.5 too
-    pairs = [("yes", "yes"), ("yes", "no"), ("no", "yes"), ("no", "no")]
-    result = cohens_kappa(pairs)
-    assert result["percent_agreement"] == 0.5
-    assert result["kappa"] == 0.0
-
-
-def test_kappa_hand_worked_example():
-    # 10 items: both yes 6, both no 2, human yes/judge no 1, human no/judge yes 1
-    pairs = [("yes", "yes")] * 6 + [("no", "no")] * 2 + [("yes", "no")] * 1 + [("no", "yes")] * 1
-    result = cohens_kappa(pairs)
-    assert result["percent_agreement"] == 0.8
-    # pe = 0.7*0.7 + 0.3*0.3 = 0.58 ; kappa = (0.8-0.58)/(1-0.58) = 0.5238
-    assert result["expected_agreement"] == 0.58
-    assert result["kappa"] == pytest.approx(0.5238, abs=1e-4)
-
-
-def test_kappa_undefined_when_every_label_is_identical():
-    """pe = 1, so the formula would divide by zero. Undefined, not 0 or 1."""
-    result = cohens_kappa([("yes", "yes")] * 5)
-    assert result["percent_agreement"] == 1.0
-    assert result["kappa"] is None
-    assert "undefined" in result["note"]
-
-
-def test_kappa_with_no_rows():
-    assert cohens_kappa([])["kappa"] is None
-
-
-def test_confusion_matrix_counts_each_cell():
-    pairs = [("yes", "yes"), ("yes", "no"), ("no", "yes"), ("no", "no"), ("yes", "yes")]
-    assert confusion_matrix(pairs) == {
-        "both_yes": 2,
-        "both_no": 1,
-        "human_yes_judge_no": 1,
-        "human_no_judge_yes": 1,
-    }
 
 
 # --- Compare runs -----------------------------------------------------------

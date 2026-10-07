@@ -147,7 +147,7 @@ Letting the model state its own pages could raise the rate by inventing them. A
 row whose retrieved pages were never recorded is *unvalidatable*, not invalid.
 
 **Committed files never contain syllabus, question or answer text.**
-`answers.jsonl` and the human labelling sheet are gitignored. `scores.csv` holds
+`answers.jsonl` is gitignored. `scores.csv` holds
 ids, statuses, scores, page numbers and an answer hash.
 
 **No published number may come from a gitignored file.**

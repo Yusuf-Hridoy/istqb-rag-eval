@@ -17,6 +17,7 @@ dependencies = [
     "ragas>=0.4.3",
     "langchain-google-genai>=4.4.0",
     "pandas>=3.0.6",
+    "watchdog>=6.0.0",
 ]
 
 [dependency-groups]

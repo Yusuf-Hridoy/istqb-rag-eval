@@ -137,9 +137,9 @@ uv run pytest -q && uv run ruff check .
 | `src/istqb_rag/` | The pipeline: config, ingestion, retrieval and answering. |
 | `src/istqb_rag/eval/` | The evaluation: dataset, the three steps, metrics and run comparison. |
 | `app/` | The Streamlit chat app. |
-| `data/` | The golden dataset and human labels. The syllabus and its extracted text are gitignored. |
+| `data/` | The golden dataset. The syllabus and its extracted text are gitignored. |
 | `runs/` | One directory per eval run: config, scores, summary and a plain `report.md`. Full answers are gitignored. |
-| `docs/` | Findings, the variance study, the dataset review and the failure taxonomy. |
+| `docs/` | Findings (including the failure taxonomy), the variance study and the dataset review. |
 | `scripts/` | The CI results-integrity check. |
 | `tests/` | Offline tests — no API keys, no network, no PDF. |
 
@@ -147,15 +147,22 @@ uv run pytest -q && uv run ruff check .
 
 - **The baseline is n=15**, so per-group means rest on one to three rows and are
   flagged "n too small".
-- **The dataset is LLM-drafted and LLM-verified**, not human-verified. *Not yet
-  done:* human calibration — `data/human_labels.csv` is unfilled, so one row has
-  no failure type and judge-vs-human agreement is uncomputed.
+- **The dataset is LLM-drafted and LLM-verified**, not human-verified. The judge
+  was never calibrated against a human, so one row has no failure type and
+  judge-vs-human agreement is unknown.
 - **One judge, free tier, output-capped.** Two faithfulness verdicts were lost to
   truncation; they are reported separately, not averaged away.
-- **Judge variance unmeasured.** *Not yet done:* re-score saved answers several
-  times — costs no answer-model calls.
+- **Judge variance unmeasured.** Re-scoring saved answers several times would
+  settle it and costs no answer-model calls.
 - **CI cannot verify scores** (no PDF, no keys); it guards code quality and the
   honesty of published results.
+
+## Next steps
+
+- Human calibration of the judge (label ~10 answers, compare with judge
+  faithfulness).
+- Noise sensitivity run (dropped on the free tier for cost: ~17k tokens per
+  question).
 
 **More detail:** [findings.md](docs/findings.md) ·
 [answer-variance.md](docs/answer-variance.md) · [DECISIONS.md](DECISIONS.md)
