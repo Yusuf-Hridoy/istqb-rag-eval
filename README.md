@@ -23,11 +23,9 @@ Detail for all four: [findings.md](docs/findings.md).
   status. `ANSWER_FORMAT` now defaults to `structured`, for stable *recorded*
   status and citations — not stabler prose.
 
-## Screenshots
+## Screenshot
 
 ![Chat tab](docs/images/chat-tab.png)
-
-![Compare runs tab](docs/images/compare-tab.png)
 
 ## How it works
 
@@ -109,11 +107,27 @@ Needs [uv](https://docs.astral.sh/uv/), Python 3.13, and the syllabus PDF at
 
 ```bash
 uv sync
-cp .env.example .env                                    # then add GROQ_API_KEY
-uv run python -m istqb_rag.ingest                       # build the vector store
-uv run streamlit run app/streamlit_app.py               # chat + eval dashboard
-uv run python -m istqb_rag.eval all --run-id my-run     # ask, judge, summarise
-uv run pytest -q && uv run ruff check .                 # offline tests and lint
+cp .env.example .env                       # then add GROQ_API_KEY
+uv run python -m istqb_rag.ingest          # build the vector store
+```
+
+Run the app:
+
+```bash
+uv run streamlit run app/streamlit_app.py
+```
+
+Run an evaluation, then open `runs/<run-id>/report.md`:
+
+```bash
+uv run python -m istqb_rag.eval all --run-id my-run
+uv run python -m istqb_rag.eval compare --base pilot-1 --new my-run
+```
+
+Run the tests:
+
+```bash
+uv run pytest -q && uv run ruff check .
 ```
 
 ## Project structure
@@ -122,9 +136,9 @@ uv run pytest -q && uv run ruff check .                 # offline tests and lint
 |---|---|
 | `src/istqb_rag/` | The pipeline: config, ingestion, retrieval and answering. |
 | `src/istqb_rag/eval/` | The evaluation: dataset, the three steps, metrics and run comparison. |
-| `app/` | Streamlit chat tab, eval dashboard and run comparison. |
+| `app/` | The Streamlit chat app. |
 | `data/` | The golden dataset and human labels. The syllabus and its extracted text are gitignored. |
-| `runs/` | One directory per eval run: config, scores and summary. Full answers are gitignored. |
+| `runs/` | One directory per eval run: config, scores, summary and a plain `report.md`. Full answers are gitignored. |
 | `docs/` | Findings, the variance study, the dataset review and the failure taxonomy. |
 | `scripts/` | The CI results-integrity check. |
 | `tests/` | Offline tests — no API keys, no network, no PDF. |

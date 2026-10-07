@@ -18,5 +18,6 @@
   "dry_run": false,
   "metrics_scored": [
     "context_recall"
-  ]
+  ],
+  "description": "Experiment 1: chunk the syllabus by numbered section instead of by character count. Only context recall was judged."
 }

@@ -16,5 +16,6 @@
   "answer_format": "text",
   "ragas_version": "0.4.3",
   "dry_run": false,
-  "metrics_scored": []
+  "metrics_scored": [],
+  "description": "A control: the baseline configuration re-run with nothing changed, to see how much the answers move on their own."
 }

@@ -8,7 +8,8 @@
       "nan_truncated": 0,
       "nan_parse_failure": 0,
       "nan_rate": 0.0,
-      "parse_failure_rate": 0.0
+      "parse_failure_rate": 0.0,
+      "unmeasured": false
     },
     "context_recall": {
       "mean": 0.7778,
@@ -18,7 +19,8 @@
       "nan_truncated": 0,
       "nan_parse_failure": 0,
       "nan_rate": 0.0,
-      "parse_failure_rate": 0.0
+      "parse_failure_rate": 0.0,
+      "unmeasured": false
     },
     "faithfulness": {
       "mean": 0.8406,
@@ -28,7 +30,8 @@
       "nan_truncated": 2,
       "nan_parse_failure": 0,
       "nan_rate": 0.2,
-      "parse_failure_rate": 0.0
+      "parse_failure_rate": 0.0,
+      "unmeasured": false
     },
     "response_relevancy": {
       "mean": 0.8692,
@@ -38,7 +41,8 @@
       "nan_truncated": 0,
       "nan_parse_failure": 0,
       "nan_rate": 0.0,
-      "parse_failure_rate": 0.0
+      "parse_failure_rate": 0.0,
+      "unmeasured": false
     }
   },
   "by_chapter": {
@@ -51,7 +55,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.4445,
@@ -61,7 +66,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 1.0,
@@ -71,7 +77,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.9772,
@@ -81,7 +88,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 2,
       "n_too_small": true
@@ -95,7 +103,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.8334,
@@ -105,7 +114,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.9166,
@@ -115,7 +125,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.8866,
@@ -125,7 +136,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 2,
       "n_too_small": true
@@ -139,7 +151,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 1.0,
@@ -149,7 +162,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 1.0,
@@ -159,7 +173,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.9566,
@@ -169,7 +184,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 1,
       "n_too_small": true
@@ -183,7 +199,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 1.0,
@@ -193,7 +210,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.6583,
@@ -203,7 +221,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.824,
@@ -213,7 +232,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 3,
       "n_too_small": false
@@ -227,7 +247,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 1.0,
@@ -237,7 +258,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": null,
@@ -247,7 +269,8 @@
         "nan_truncated": 2,
         "nan_parse_failure": 0,
         "nan_rate": 1.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.8014,
@@ -257,7 +280,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 2,
       "n_too_small": true
@@ -271,7 +295,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.0,
@@ -281,7 +306,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.9167,
@@ -291,7 +317,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.9098,
@@ -301,7 +328,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 1,
       "n_too_small": true
@@ -317,7 +345,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.8889,
@@ -327,7 +356,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 1.0,
@@ -337,7 +367,8 @@
         "nan_truncated": 1,
         "nan_parse_failure": 0,
         "nan_rate": 0.25,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.8867,
@@ -347,7 +378,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 4,
       "n_too_small": false
@@ -361,7 +393,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.6,
@@ -371,7 +404,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.9062,
@@ -381,7 +415,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.8757,
@@ -391,7 +426,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 5,
       "n_too_small": false
@@ -405,7 +441,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 1.0,
@@ -415,7 +452,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.1,
@@ -425,7 +463,8 @@
         "nan_truncated": 1,
         "nan_parse_failure": 0,
         "nan_rate": 0.5,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.821,
@@ -435,7 +474,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 2,
       "n_too_small": true
@@ -451,7 +491,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.9444,
@@ -461,7 +502,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.7617,
@@ -471,7 +513,8 @@
         "nan_truncated": 1,
         "nan_parse_failure": 0,
         "nan_rate": 0.1667,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.8334,
@@ -481,7 +524,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 6,
       "n_too_small": false
@@ -495,7 +539,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "context_recall": {
         "mean": 0.5778,
@@ -505,7 +550,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "faithfulness": {
         "mean": 0.9722,
@@ -515,7 +561,8 @@
         "nan_truncated": 1,
         "nan_parse_failure": 0,
         "nan_rate": 0.25,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "response_relevancy": {
         "mean": 0.9228,
@@ -525,7 +572,8 @@
         "nan_truncated": 0,
         "nan_parse_failure": 0,
         "nan_rate": 0.0,
-        "parse_failure_rate": 0.0
+        "parse_failure_rate": 0.0,
+        "unmeasured": false
       },
       "n": 5,
       "n_too_small": false

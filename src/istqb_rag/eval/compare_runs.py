@@ -223,8 +223,13 @@ def run_compare(
     data["new_run"] = new_id
     out = settings.runs_dir / new_id / "comparison.json"
     out.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+    from istqb_rag.eval.plain_report import write_comparison
+
+    plain = write_comparison(settings.runs_dir / new_id, base_id, data, settings.golden_path)
     print_comparison(data, base_id, new_id)
     print(f"\nwrote {out}")
+    print(f"wrote {plain}")
     return data
 
 

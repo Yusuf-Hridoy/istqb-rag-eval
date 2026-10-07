@@ -16,5 +16,6 @@
   "answer_format": "structured",
   "ragas_version": "0.4.3",
   "dry_run": false,
-  "metrics_scored": []
+  "metrics_scored": [],
+  "description": "Experiment 2: ask the model for JSON so it states its own status and cited pages. Not judged."
 }

@@ -1,20 +1,20 @@
-"""Streamlit UI for the ISTQB CTFL assistant.
+"""Streamlit chat UI for the ISTQB CTFL assistant.
 
 Run with: uv run streamlit run app/streamlit_app.py
+
+Chat only. Evaluation is a command-line job that writes plain report files to
+runs/<run-id>/report.md.
 """
 
-import json
+import re
 import sys
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from istqb_rag.config import get_settings  # noqa: E402
-from istqb_rag.eval.step2_judge_scores import METRIC_KEYS  # noqa: E402
-from istqb_rag.eval.step3_build_summary import MIN_GROUP_N  # noqa: E402
 from istqb_rag.pipeline import answer  # noqa: E402
 
 EXAMPLE_QUESTIONS = [
@@ -24,12 +24,8 @@ EXAMPLE_QUESTIONS = [
     "What does risk-based testing involve?",
 ]
 
-METRIC_LABELS = {
-    "context_precision": "Context precision",
-    "context_recall": "Context recall",
-    "faithfulness": "Faithfulness",
-    "response_relevancy": "Response relevancy",
-}
+# A sentence ending followed by whitespace. Used only to tidy what is shown.
+_SENTENCE_END = re.compile(r"[.!?][\"')\]]?\s")
 
 
 @st.cache_resource
@@ -38,183 +34,58 @@ def get_pipeline():
     return get_settings()
 
 
-# --- Eval dashboard ---------------------------------------------------------
+@st.cache_resource
+def get_scorer():
+    """One Ragas scorer for the whole session, reused from the eval code."""
+    from istqb_rag.eval.step2_judge_scores import make_scorer
+
+    return make_scorer()
 
 
-def _list_runs(settings) -> list[str]:
-    """Run ids that have a committed summary, newest first."""
-    if not settings.runs_dir.exists():
-        return []
-    runs = [
-        d.name for d in settings.runs_dir.iterdir() if d.is_dir() and (d / "summary.json").exists()
-    ]
-    return sorted(
-        runs, key=lambda n: (settings.runs_dir / n / "summary.json").stat().st_mtime, reverse=True
-    )
+def trim_to_sentences(text: str) -> str:
+    """Trim a chunk to whole sentences, for display only.
+
+    A retrieved chunk is cut by character count, so it often starts mid-sentence
+    and ends mid-word. This drops the dangling halves so a quoted source reads
+    properly. The model still receives the untrimmed chunk — this never changes
+    what was retrieved or sent.
+    """
+    cleaned = " ".join((text or "").split())
+    if not cleaned:
+        return ""
+
+    body = cleaned
+    if body[:1].islower():  # the sentence began in the previous chunk
+        first = _SENTENCE_END.search(body)
+        if first:
+            body = body[first.end() :]
+
+    if body and body[-1] not in ".!?":  # the last sentence was cut off
+        ends = [m.end() for m in _SENTENCE_END.finditer(body)]
+        if ends:
+            body = body[: ends[-1]]
+
+    return body.strip() or cleaned
 
 
-@st.cache_data
-def _load_run(runs_dir_str: str, run_id: str):
-    run_dir = Path(runs_dir_str) / run_id
-    summary = json.loads((run_dir / "summary.json").read_text())
-    config = {}
-    if (run_dir / "config.json").exists():
-        config = json.loads((run_dir / "config.json").read_text())
-    scores = pd.read_csv(run_dir / "scores.csv")
-    return summary, config, scores
+def cited_chunks(contexts, cited_pages):
+    """Only the retrieved chunks whose page the answer actually cited."""
+    cited = set(cited_pages or [])
+    return [c for c in contexts if c.page in cited]
 
 
-@st.cache_data
-def _load_questions(golden_path_str: str) -> dict[str, str]:
-    """Question text by id, for the Worst 10 table (scores.csv holds no text)."""
-    path = Path(golden_path_str)
-    if not path.exists():
-        return {}
-    out = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            row = json.loads(line)
-            out[row["id"]] = row["question"]
-    return out
+def score_caption(values: dict) -> str:
+    """One line: the two scores a reference-free judge can produce."""
 
+    def fmt(key):
+        value = values.get(key)
+        return "—" if value is None else f"{value:.2f}"
 
-def _metric_card(column, key: str, stats: dict) -> None:
-    mean = stats.get("mean")
-    column.metric(METRIC_LABELS[key], f"{mean:.3f}" if mean is not None else "—")
-    if stats.get("unmeasured"):
-        # Absent because the run never asked for it, not because it scored badly.
-        column.caption("not measured in this run")
-        return
-    column.caption(f"{stats.get('scored', 0)} rows scored · {stats.get('nan', 0)} NaN")
-
-
-def _group_table(groups: dict) -> pd.DataFrame:
-    """Group means with n, greying out any group too thin to read."""
-    data = {}
-    for group, stats in groups.items():
-        label = f"{group} (n={stats['n']})"
-        if stats.get("n_too_small"):
-            data[label] = dict.fromkeys(METRIC_LABELS.values(), "n too small")
-        else:
-            data[label] = {
-                METRIC_LABELS[key]: (
-                    f"{stats[key]['mean']:.3f}" if stats[key]["mean"] is not None else "—"
-                )
-                for key in METRIC_KEYS
-            }
-    return pd.DataFrame(data)
-
-
-def _grey_small_n(frame: pd.DataFrame):
-    return frame.style.map(
-        lambda v: "color: #999; font-style: italic" if v == "n too small" else ""
-    )
-
-
-def _group_section(summary: dict, section: str, title: str) -> None:
-    """A bar chart of the groups with enough rows, plus a table carrying every n."""
-    groups = summary.get(section, {})
-    if not groups:
-        return
-    st.caption(title)
-
-    big = {g: s for g, s in groups.items() if not s.get("n_too_small")}
-    if big:
-        st.bar_chart(
-            pd.DataFrame(
-                {
-                    METRIC_LABELS[key]: {
-                        f"{g} (n={s['n']})": s[key]["mean"] for g, s in big.items()
-                    }
-                    for key in METRIC_KEYS
-                }
-            )
-        )
-    thin = [g for g, s in groups.items() if s.get("n_too_small")]
-    if thin:
-        st.caption(
-            f"Not charted, fewer than {MIN_GROUP_N} rows: "
-            + ", ".join(f"{g} (n={groups[g]['n']})" for g in thin)
-        )
-    st.dataframe(_grey_small_n(_group_table(groups)), use_container_width=True)
-
-
-def render_eval_tab(settings) -> None:
-    runs = _list_runs(settings)
-    if not runs:
-        st.info(
-            "No eval runs yet. Generate one with:\n\n"
-            "```\nuv run python -m istqb_rag.eval all --run-id baseline\n```"
-        )
-        return
-
-    run_id = st.selectbox("Run", runs, index=0)
-    summary, config, scores = _load_run(str(settings.runs_dir), run_id)
-
-    st.caption(
-        f"answer: {config.get('answer_model', '?')} · judge: {config.get('judge_model', '?')} · "
-        f"{config.get('row_count', len(scores))} rows · {str(config.get('timestamp', ''))[:10]}"
-    )
-
-    cols = st.columns(4)
-    for col, key in zip(cols, METRIC_KEYS, strict=True):
-        _metric_card(col, key, summary["overall"][key])
-
-    rate = summary["in_scope_answer_rate"]
-    scope = summary["scope_handling"]
-    errors = summary["errors"]
-    second = st.columns(4)
-    second[0].metric("In-scope answer rate", f"{(rate['rate'] or 0) * 100:.1f}%")
-    second[0].caption(f"{rate['answered']}/{rate['total']} answered")
-    second[1].metric(
-        "Out-of-scope accuracy",
-        f"{(scope['out_of_scope_accuracy'] or 0) * 100:.1f}%",
-    )
-    second[1].caption(f"{scope['out_of_scope_total']} rows")
-    second[2].metric(
-        "Not-in-syllabus accuracy",
-        f"{(scope['not_in_syllabus_accuracy'] or 0) * 100:.1f}%",
-    )
-    second[2].caption(f"{scope['not_in_syllabus_total']} rows")
-    second[3].metric("Errors", errors["count"])
-    second[3].caption(f"{errors['error_rate'] * 100:.1f}% of rows")
-
-    if scope["possible_hallucination_ids"]:
-        st.warning(
-            "Possible hallucinations (not-in-syllabus rows that were answered): "
-            + ", ".join(scope["possible_hallucination_ids"])
-        )
-    if rate["not_answered_ids"]:
-        st.info("False refusals (in-scope, not answered): " + ", ".join(rate["not_answered_ids"]))
-
-    _group_section(summary, "by_chapter", "Metrics by chapter")
-    _group_section(summary, "by_k_level", "Metrics by K-level")
-
-    st.caption("Multi-chunk answers vs single-chunk")
-    multi = summary.get("by_multi_chunk", {})
-    if multi:
-        renamed = {
-            ("multi-chunk" if group == "True" else "single-chunk"): stats
-            for group, stats in multi.items()
-        }
-        st.dataframe(_grey_small_n(_group_table(renamed)), use_container_width=True)
-
-    st.caption("Worst 10 in-scope rows")
-    worst = pd.DataFrame(summary["worst_10"])
-    if not worst.empty:
-        questions = _load_questions(str(settings.golden_path))
-        worst.insert(1, "question", worst["id"].map(questions).fillna(""))
-        st.dataframe(worst, use_container_width=True, hide_index=True)
-
-    lat = summary["latency_ms"]
-    st.caption(f"Latency: median {lat['median']:.0f} ms · p95 {lat['p95']:.0f} ms")
-
-
-# --- Chat -------------------------------------------------------------------
+    return f"Judge: faithfulness {fmt('faithfulness')} · relevance {fmt('response_relevancy')}"
 
 
 def _judge_available(settings) -> bool:
-    """The live score button needs whichever key the configured judge uses."""
+    """The judge needs whichever key its provider uses."""
     import os
 
     if settings.judge_model.startswith("gemini"):
@@ -222,29 +93,16 @@ def _judge_available(settings) -> bool:
     return bool(settings.groq_api_key)
 
 
-@st.cache_resource
-def get_scorer():
-    """One Ragas scorer for the whole session, reused from step2_judge_scores.py."""
-    from istqb_rag.eval.step2_judge_scores import make_scorer
+def _render_score(result, settings) -> None:
+    """Score an answered reply, when scoring is on and a judge key exists."""
+    if result.status != "answered":
+        return  # a refusal or a not-found has nothing to be faithful to
+    if not st.session_state.get("auto_score", True):
+        return
+    if not _judge_available(settings):
+        st.caption("Scoring is off: set GROQ_API_KEY in .env to enable it.")
+        return
 
-    return make_scorer()
-
-
-def score_caption(values: dict) -> str:
-    """One line: the two scores and why the other two are absent."""
-
-    def fmt(key):
-        value = values.get(key)
-        return "—" if value is None else f"{value:.2f}"
-
-    return (
-        f"Judge: faithfulness {fmt('faithfulness')} · "
-        f"relevance {fmt('response_relevancy')} "
-        "(no reference answer, so retrieval metrics aren't scored)"
-    )
-
-
-def _score_now(result) -> None:
     with st.spinner("Asking the judge…"):
         outcome = get_scorer()(
             result.question,
@@ -254,42 +112,9 @@ def _score_now(result) -> None:
             ["faithfulness", "response_relevancy"],
         )
     if outcome.api_error:
-        st.error(f"Judge call failed: {outcome.api_error}")
+        st.caption(f"Judge call failed: {outcome.api_error}")
         return
     st.caption(score_caption(outcome.values))
-
-
-def _render_score_button(result, key: str, settings) -> None:
-    if result.status != "answered":
-        return
-    if not _judge_available(settings):
-        st.caption("Scoring is off: set GROQ_API_KEY in .env to enable it.")
-        return
-
-    if st.session_state.get("auto_score"):
-        _score_now(result)
-        return
-    if st.button("Score this answer", key=f"score-{key}"):
-        _score_now(result)
-
-
-def split_sources(contexts, cited_pages):
-    """(chunks whose page the answer cited, the rest).
-
-    Retrieval always returns TOP_K chunks, but an answer usually leans on one or
-    two. Showing all of them under "Sources used" implies the answer used them
-    all. Retrieval is unchanged — this only affects what is shown.
-    """
-    cited = set(cited_pages or [])
-    used = [c for c in contexts if c.page in cited]
-    other = [c for c in contexts if c.page not in cited]
-    return used, other
-
-
-def _render_chunks(chunks) -> None:
-    for chunk in chunks:
-        st.markdown(f"**p. {chunk.page}** — relevance {chunk.score:.2f}")
-        st.caption(chunk.text)
 
 
 def _render_result(result) -> None:
@@ -299,22 +124,32 @@ def _render_result(result) -> None:
         st.error(f"Error: {result.error}")
     else:
         st.markdown(result.answer)
+
     if result.cited_pages:
         st.markdown(" ".join(f"`p. {p}`" for p in result.cited_pages))
-    used, other = split_sources(result.contexts, result.cited_pages)
-    if used:
-        with st.expander(f"Sources used ({len(used)})"):
-            _render_chunks(used)
-    if other:
-        with st.expander(f"Other retrieved chunks, not used in the answer ({len(other)})"):
-            _render_chunks(other)
-    st.caption(
-        f"status: {result.status} · latency: {result.latency_ms['total']} ms"
-        f" · model: {result.model}"
-    )
+
+    for chunk in cited_chunks(result.contexts, result.cited_pages):
+        with st.expander(f"Source · p. {chunk.page}"):
+            st.caption(trim_to_sentences(chunk.text))
 
 
-def render_chat_tab(settings) -> None:
+def main() -> None:
+    st.set_page_config(page_title="ISTQB CTFL Assistant")
+    st.title("ISTQB CTFL Assistant")
+    settings = get_pipeline()
+
+    with st.sidebar:
+        st.caption(f"Model: {settings.answer_model}")
+        st.toggle("Score answers automatically", key="auto_score", value=True)
+        st.caption("Each score uses ~3 judge calls.")
+        for q in EXAMPLE_QUESTIONS:
+            if st.button(q, key=f"example-{q}"):
+                st.session_state["pending_question"] = q
+        if st.button("Clear chat"):
+            st.session_state["messages"] = []
+            st.session_state.pop("pending_question", None)
+            st.rerun()
+
     store_ready = settings.chroma_dir.exists() and any(settings.chroma_dir.iterdir())
     if not store_ready:
         st.warning(
@@ -327,12 +162,10 @@ def render_chat_tab(settings) -> None:
     if "messages" not in st.session_state:
         st.session_state["messages"] = []
 
-    for i, message in enumerate(st.session_state["messages"]):
+    for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
             if message["role"] == "assistant":
-                # _render_result prints the answer; printing content too duplicated it
-                _render_result(message["result"])
-                _render_score_button(message["result"], str(i), settings)
+                _render_result(message["result"])  # prints the answer itself
             else:
                 st.markdown(message["content"])
 
@@ -347,152 +180,10 @@ def render_chat_tab(settings) -> None:
         with st.chat_message("assistant"):
             result = answer(question)  # single-turn: no history is passed
             _render_result(result)
+            _render_score(result, settings)
         st.session_state["messages"].append(
             {"role": "assistant", "content": result.answer, "result": result}
         )
-        st.rerun()  # re-render so the new reply gets its score button
-
-
-# --- Compare runs -----------------------------------------------------------
-
-
-def render_compare_tab(settings) -> None:
-    """Two runs side by side. All logic lives in compare_runs.py."""
-    from istqb_rag.eval.compare_runs import compare, reference_pages_from_golden
-    from istqb_rag.eval.step3_build_summary import load_scores
-
-    runs = _list_runs(settings)
-    if len(runs) < 2:
-        st.info("Two runs with a scores.csv are needed to compare. Run another experiment first.")
-        return
-
-    left, right = st.columns(2)
-    base_id = left.selectbox("Base run", runs, index=min(1, len(runs) - 1))
-    new_id = right.selectbox("New run", runs, index=0)
-    if base_id == new_id:
-        st.warning("Pick two different runs.")
-        return
-
-    base_rows = load_scores(settings.runs_dir / base_id / "scores.csv")
-    new_rows = load_scores(settings.runs_dir / new_id / "scores.csv")
-    data = compare(base_rows, new_rows, reference_pages_from_golden(settings.golden_path))
-    st.caption(f"{data['rows_compared']} rows joined on id")
-
-    st.caption("Metric means")
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "metric": METRIC_LABELS[key],
-                    f"{base_id} (n)": f"{m['base_mean']:.3f} ({m['base_n']})"
-                    if m["base_mean"] is not None
-                    else "—",
-                    f"{new_id} (n)": f"{m['new_mean']:.3f} ({m['new_n']})"
-                    if m["new_mean"] is not None
-                    else "—",
-                    "delta": f"{m['delta']:+.3f}" if m["delta"] is not None else "—",
-                }
-                for key, m in data["metrics"].items()
-            ]
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    rates = [
-        (
-            "Citation rate",
-            data["citation_rate"]["base"]["rate"],
-            data["citation_rate"]["new"]["rate"],
-        ),
-        (
-            "Out-of-scope accuracy",
-            data["out_of_scope_accuracy"]["base"][0],
-            data["out_of_scope_accuracy"]["new"][0],
-        ),
-        ("Answer rate", data["answer_rate"]["base"][0], data["answer_rate"]["new"][0]),
-    ]
-    if "page_hit_rate" in data:
-        rates.append(
-            (
-                "Page hit rate",
-                data["page_hit_rate"]["base"]["rate"],
-                data["page_hit_rate"]["new"]["rate"],
-            )
-        )
-    st.caption("Deterministic rates")
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "measure": name,
-                    base_id: "—" if b is None else f"{b:.3f}",
-                    new_id: "—" if n is None else f"{n:.3f}",
-                }
-                for name, b, n in rates
-            ]
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.caption("Rows that changed status or moved by more than 0.2")
-    if not data["changed_rows"]:
-        st.caption("No row changed.")
-        return
-    questions = _load_questions(str(settings.golden_path))
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "id": row["id"],
-                    "question": questions.get(row["id"], ""),
-                    "multi_chunk": row["multi_chunk"],
-                    "status": f"{row['base_status']} -> {row['new_status']}"
-                    if row["status_changed"]
-                    else row["base_status"],
-                    **{
-                        METRIC_LABELS[k]: f"{v['base']} -> {v['new']}"
-                        for k, v in row["moved"].items()
-                    },
-                }
-                for row in data["changed_rows"]
-            ]
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-
-def main() -> None:
-    st.set_page_config(page_title="ISTQB CTFL Assistant", layout="wide")
-    st.title("ISTQB CTFL Assistant")
-    settings = get_pipeline()
-
-    with st.sidebar:
-        st.caption(f"Model: {settings.answer_model}")
-        st.caption(f"Judge: {settings.judge_model}")
-        st.toggle(
-            "Auto-score every answer",
-            key="auto_score",
-            value=False,
-            help="Each score costs about 3 judge calls.",
-        )
-        for q in EXAMPLE_QUESTIONS:
-            if st.button(q, key=f"example-{q}"):
-                st.session_state["pending_question"] = q
-        if st.button("Clear chat"):
-            st.session_state["messages"] = []
-            st.session_state.pop("pending_question", None)
-            st.rerun()
-
-    chat_tab, eval_tab, compare_tab = st.tabs(["Chat", "Eval dashboard", "Compare runs"])
-    with eval_tab:
-        render_eval_tab(settings)
-    with compare_tab:
-        render_compare_tab(settings)
-    with chat_tab:
-        render_chat_tab(settings)
 
 
 if __name__ == "__main__":

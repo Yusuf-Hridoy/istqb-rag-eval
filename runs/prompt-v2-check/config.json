@@ -17,5 +17,6 @@
   "prompt_version": 2,
   "ragas_version": "0.4.3",
   "dry_run": false,
-  "metrics_scored": []
+  "metrics_scored": [],
+  "description": "A check that the shorter answer prompt (version 2) did not break anything. Not judged."
 }

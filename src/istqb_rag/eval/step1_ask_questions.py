@@ -43,12 +43,14 @@ def write_run_config(
     *,
     dry_run: bool,
     settings: Settings,
+    description: str = "",
 ) -> Path:
     """Write runs/<run_id>/config.json (committed; no question or answer text)."""
     import ragas
 
     config = {
         "run_id": run_id,
+        "description": description,
         "timestamp": datetime.now(UTC).isoformat(),
         "git_sha": _git_sha(),
         "golden_sha256": _sha256(settings.golden_path) if settings.golden_path.exists() else "",
@@ -87,12 +89,15 @@ def run_generate(
     *,
     dry_run: bool = False,
     settings: Settings | None = None,
+    description: str = "",
 ) -> dict[str, int]:
     """Answer every row, appending each result to answers.jsonl immediately."""
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    write_run_config(run_dir, run_id, len(rows), dry_run=dry_run, settings=settings)
+    write_run_config(
+        run_dir, run_id, len(rows), dry_run=dry_run, settings=settings, description=description
+    )
 
     answers_path = run_dir / "answers.jsonl"
     done = _existing_ids(answers_path)

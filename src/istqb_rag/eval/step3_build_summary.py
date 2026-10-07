@@ -298,5 +298,10 @@ def run_report(run_id: str, *, settings: Settings | None = None) -> dict:
 
     summary_path = run_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+
+    from istqb_rag.eval.plain_report import write_report
+
+    report_path = write_report(run_dir, summary, rows, settings.golden_path)
     print(f"\nwrote {summary_path}")
+    print(f"wrote {report_path}")
     return summary

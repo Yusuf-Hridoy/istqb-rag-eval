@@ -12,5 +12,6 @@
   "chunk_size": 1000,
   "chunk_overlap": 150,
   "ragas_version": "0.4.3",
-  "dry_run": false
+  "dry_run": false,
+  "description": "The baseline: 15 reviewed questions, fully judged. Everything else is compared against this."
 }

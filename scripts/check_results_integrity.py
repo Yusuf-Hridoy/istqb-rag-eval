@@ -25,7 +25,7 @@ from istqb_rag.eval.readme_tables import (  # noqa: E402
 )
 from istqb_rag.eval.step2_judge_scores import SCORES_COLUMNS  # noqa: E402
 
-REQUIRED_RUN_FILES = ("config.json", "scores.csv", "summary.json")
+REQUIRED_RUN_FILES = ("config.json", "scores.csv", "summary.json", "report.md")
 # Only these may appear in a committed scores.csv. Anything else could carry a
 # question, an answer or syllabus text into git.
 ALLOWED_SCORE_COLUMNS = set(SCORES_COLUMNS)

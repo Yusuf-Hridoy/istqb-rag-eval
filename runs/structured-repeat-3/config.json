@@ -16,5 +16,6 @@
   "answer_format": "structured",
   "ragas_version": "0.4.3",
   "dry_run": false,
-  "metrics_scored": []
+  "metrics_scored": [],
+  "description": "Variance sample 3 of 4 for the structured answer format."
 }
