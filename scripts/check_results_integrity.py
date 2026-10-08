@@ -1,13 +1,4 @@
-"""Fail the build if a published result could be wrong or a file could leak text.
-
-CI has no syllabus PDF and no API keys, so it cannot run the bot or reproduce a
-score. What it *can* do is guarantee that the numbers in the README were
-generated from the run files rather than typed, that every run is complete, that
-no committed file has a column able to hold syllabus or answer text, and that
-the dataset still validates. That is what this checks.
-
-Run: uv run python scripts/check_results_integrity.py
-"""
+"""Fail the build if a published result could be wrong or a file could leak text."""
 
 import csv
 import sys
@@ -26,8 +17,7 @@ from istqb_rag.eval.readme_tables import (  # noqa: E402
 from istqb_rag.eval.step2_judge_scores import SCORES_COLUMNS  # noqa: E402
 
 REQUIRED_RUN_FILES = ("config.json", "scores.csv", "summary.json", "report.md")
-# Only these may appear in a committed scores.csv. Anything else could carry a
-# question, an answer or syllabus text into git.
+# Anything outside this set could carry a question, answer or syllabus text into git.
 ALLOWED_SCORE_COLUMNS = set(SCORES_COLUMNS)
 
 

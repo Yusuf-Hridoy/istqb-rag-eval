@@ -1,10 +1,4 @@
-"""Compare two runs row by row: metric deltas, status changes, and what moved.
-
-Runs are joined on question id, never on row order, so a run that scored a
-different subset still lines up. The output deliberately contains no words like
-"improved" — it reports numbers and n, and the findings document does the
-interpreting.
-"""
+"""Compare two runs row by row: metric deltas, status changes, and what moved."""
 
 import json
 import math

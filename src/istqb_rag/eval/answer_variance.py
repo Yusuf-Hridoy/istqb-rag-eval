@@ -1,16 +1,4 @@
-"""Measure how much answer-side metrics move between identical runs.
-
-Phase 3 found the answer model does not repeat at temperature 0, which makes any
-single-run answer-side number one sample from an unmeasured distribution. This
-module reads several runs of the same configuration and reports the spread, the
-rows whose status flipped, and how often a row produced the same answer twice.
-
-Answer text is never read into the output: stability is measured from the
-``answer_sha256`` column, so nothing quotable reaches a committed file — and,
-just as importantly, nothing here reads the gitignored ``answers.jsonl``. Every
-number comes from a committed ``scores.csv``, so CI can reproduce it on a clean
-checkout. Zero judge calls.
-"""
+"""Measure how much answer-side metrics move between identical runs."""
 
 from collections import Counter
 from dataclasses import dataclass
@@ -31,12 +19,10 @@ class RunSample:
 
 
 def answer_hashes(rows: list[dict]) -> tuple[dict[str, str], int]:
-    """{id: answer hash} plus the run's format-fallback count, from scores.csv.
+    """{id: answer hash} plus the format-fallback count, from committed columns only.
 
-    Both come from committed columns (``answer_sha256`` and ``format_fallback``),
-    so this works on a clean checkout where ``answers.jsonl`` is absent. A run
-    predating those columns yields no hashes, and stability is then reported over
-    the rows that do have one rather than silently counting them as identical.
+    Stability is compared by hash so no answer text is read, and a run with no
+    hashes is left out rather than counted as identical.
     """
     hashes = {
         row["id"]: row["answer_sha256"]
@@ -154,12 +140,7 @@ def mode_summary(samples: list[RunSample]) -> dict:
 
 
 def apply_decision_rule(text: dict, structured: dict) -> dict:
-    """The rule from docs/answer-variance.md, applied exactly as written.
-
-    (a) structured total format fallbacks <= 1
-    (b) structured never records a scope row as answered
-    (c) structured mean citation rate >= text mean citation rate
-    """
+    """The rule from docs/answer-variance.md, applied exactly as written."""
     a_value = structured["total_fallbacks"]
     a = a_value <= 1
 

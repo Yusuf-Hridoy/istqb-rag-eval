@@ -1,12 +1,4 @@
-"""Ingest the syllabus PDF into the local Chroma vector store.
-
-Run with: uv run python -m istqb_rag.ingest [--chunking page|section]
-Rerunning deletes and rebuilds the collection.
-
-Two chunking modes: ``page`` splits each page by character count (the Phase 2
-baseline), ``section`` keeps a numbered syllabus section together in one chunk
-and writes to its own collection.
-"""
+"""Ingest the syllabus PDF into the local Chroma vector store."""
 
 import argparse
 import dataclasses
@@ -26,11 +18,8 @@ DOWNLOAD_URL = "https://www.istqb.org/certifications/certified-tester-foundation
 
 _DIGITS = re.compile(r"\d+")
 
-# A numbered syllabus heading. Two shapes occur in the CTFL v4 PDF:
-#   "1.1  What is Testing?"      — number and title on one line
-#   "1.1.1. " / "Test Objectives" — number and title on separate lines
-# Detecting only the first finds 21 of 78 headings, well under the 40-section
-# floor below, so both are matched. See DECISIONS.md.
+# Both heading shapes are matched: the CTFL v4 PDF puts the number and title on
+# one line in some places and on separate lines in others.
 _HEADING_INLINE = re.compile(r"^(\d+(?:\.\d+){1,2})\.?\s+([A-Z].*)$")
 _HEADING_NUMBER_ONLY = re.compile(r"^(\d+(?:\.\d+){1,2})\.?\s*$")
 MIN_EXPECTED_SECTIONS = 40
@@ -49,11 +38,9 @@ def is_section_number_line(line: str) -> bool:
 def remove_repeated_lines(page_texts: list[str], *, protect=None) -> list[str]:
     """Remove lines that appear on more than half of the pages (headers/footers).
 
-    ``protect`` exempts lines from removal. Section mode needs it: digit runs are
-    normalised before counting, so every bare subsection number ("5.1.1.",
-    "6.2.1.") collapses to the same "#.#.#." form, appears on most pages, and
-    would be stripped as boilerplate — taking the section headings with it.
-    Page mode passes no protector and is therefore byte-identical to Phase 2.
+    ``protect`` exempts lines: normalising digit runs collapses every bare
+    subsection number to "#.#.#.", which would otherwise be stripped as
+    boilerplate and take the section headings with it.
     """
     if not page_texts:
         return page_texts
@@ -77,10 +64,7 @@ def remove_repeated_lines(page_texts: list[str], *, protect=None) -> list[str]:
 
 
 def load_pages(settings: Settings) -> list[Document]:
-    """Load the PDF, keep content pages, and strip repeated header/footer lines.
-
-    Returns one document per page with 1-based ``page`` metadata.
-    """
+    """Load the PDF, keep content pages, and strip repeated header/footer lines."""
     if not settings.syllabus_path.exists():
         sys.exit(
             f"Syllabus PDF not found at {settings.syllabus_path}.\n"
@@ -99,7 +83,7 @@ def load_pages(settings: Settings) -> list[Document]:
     cleaned = remove_repeated_lines([d.page_content for d in content], protect=protect)
     for doc, text in zip(content, cleaned, strict=True):
         doc.page_content = text
-        doc.metadata["page"] = doc.metadata["page"] + 1  # 1-based, as printed in the PDF viewer
+        doc.metadata["page"] = doc.metadata["page"] + 1  # 1-based, as printed in the PDF
     return content
 
 
@@ -136,13 +120,7 @@ def find_headings(lines: list[str]) -> list[tuple[int, str, str]]:
 
 
 def split_sections(pages: list[Document], settings: Settings) -> list[Document]:
-    """One chunk per numbered section, with its heading prepended.
-
-    A section longer than ``chunk_size`` is split with the same splitter the
-    page mode uses, and every piece keeps the heading so a retrieved fragment
-    still says which section it came from. ``page`` metadata is the section's
-    start page, so existing citations keep working.
-    """
+    """One chunk per numbered section, with its heading prepended to every piece."""
     lines: list[str] = []
     line_pages: list[int] = []
     for page in pages:
@@ -154,10 +132,8 @@ def split_sections(pages: list[Document], settings: Settings) -> list[Document]:
     if not headings:
         return []
 
-    # A chapter's contents page lists the same numbers as the body ("1.3" appears
-    # both on the contents page and at the real section), which would produce
-    # duplicate chunk_ids and a section whose body is just a list of titles.
-    # Keep, for each section id, the occurrence with the most text under it.
+    # The contents page repeats every section number, so keep the occurrence with
+    # the most text under it or a "section" is just a list of titles.
     bounds = {}
     for n, (start, section_id, heading) in enumerate(headings):
         end = headings[n + 1][0] if n + 1 < len(headings) else len(lines)

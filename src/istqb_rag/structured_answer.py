@@ -1,18 +1,8 @@
-"""Parse the JSON reply the answer model returns in ANSWER_FORMAT=structured mode.
-
-Phase 2 guessed a reply's status by matching it against two fixed sentences, so a
-model that refused in its own words was recorded as having answered (q072) and an
-answer with no citation went unnoticed (q011). Structured mode asks the model to
-say its own status and cite its own pages instead of inferring both from prose.
-
-Parsing is kept here, separate from the pipeline, so it can be tested without a
-model and so an unparseable reply has one obvious place to fall back from.
-"""
+"""Parse the JSON reply the answer model returns in ANSWER_FORMAT=structured mode."""
 
 import json
 from dataclasses import dataclass, field
 
-# The model's own status vocabulary, mapped to the pipeline's.
 _STATUS_MAP = {
     "answered": "answered",
     "refused": "refused",
@@ -29,7 +19,6 @@ class StructuredReply:
 
 
 def _as_pages(value: object) -> list[int]:
-    """Page numbers from the model, ignoring anything that is not a positive int."""
     if not isinstance(value, list):
         return []
     pages = []
@@ -48,12 +37,7 @@ def _as_pages(value: object) -> list[int]:
 
 
 def parse_structured_reply(raw: str) -> StructuredReply | None:
-    """Turn the model's JSON into a StructuredReply, or None if it is unusable.
-
-    None means the caller should fall back to Phase 2's text matching and set
-    ``format_fallback`` on the result. Returning None rather than raising keeps
-    a malformed reply from ever failing a run.
-    """
+    """Turn the model's JSON into a StructuredReply, or None for the caller to fall back."""
     text = (raw or "").strip()
     if text.startswith("```"):  # a fenced block slipped through
         text = text.strip("`")
@@ -79,8 +63,7 @@ def parse_structured_reply(raw: str) -> StructuredReply | None:
         status=mapped,
         answer=answer.strip(),
         cited_pages=pages,
-        # The format requires a citation on an answered reply. A missing one is
-        # a content problem, not a parse failure, so it is flagged rather than
-        # thrown away — the citation-rate metric counts it.
+        # A missing citation is a content problem, not a parse failure: flagged
+        # and counted rather than thrown away.
         missing_citation=(mapped == "answered" and not pages),
     )

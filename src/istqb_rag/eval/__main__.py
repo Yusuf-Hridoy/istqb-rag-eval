@@ -1,14 +1,4 @@
-"""Eval CLI: generate, score, report — or all three in order.
-
-uv run python -m istqb_rag.eval generate --run-id baseline
-uv run python -m istqb_rag.eval score    --run-id baseline
-uv run python -m istqb_rag.eval report   --run-id baseline
-uv run python -m istqb_rag.eval all      --run-id baseline
-uv run python -m istqb_rag.eval quick    --run-id exp2       # generate + judge-free report
-uv run python -m istqb_rag.eval compare  --base pilot-1 --new exp1
-uv run python -m istqb_rag.eval variance --text <ids> --structured <ids>
-uv run python -m istqb_rag.eval readme-tables                 # regenerate README results
-"""
+"""Eval CLI: generate, score and report a run, plus compare, variance and quick."""
 
 import argparse
 import sys
@@ -36,7 +26,6 @@ def _load_rows(args) -> list:
 
 
 def _quick(args) -> None:
-    """Generate answers, then report everything that needs no judge."""
     from istqb_rag.config import get_settings
     from istqb_rag.eval.compare_runs import reference_pages_from_golden
     from istqb_rag.eval.deterministic_metrics import (
@@ -85,7 +74,6 @@ def _quick(args) -> None:
 
 
 def _variance(args) -> None:
-    """Measure answer-side spread across repeated runs. No judge calls."""
     import json as _json
     from pathlib import Path
 

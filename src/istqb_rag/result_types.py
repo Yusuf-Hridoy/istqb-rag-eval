@@ -1,7 +1,6 @@
 """The result objects every part of the app passes around: RetrievedChunk and RagResult.
 
-Phase 2's Ragas runner reads ``question``, ``answer`` and ``contexts[].text``
-directly — do not rename those fields.
+Ragas reads ``question``, ``answer`` and ``contexts[].text`` by name — do not rename them.
 """
 
 from dataclasses import dataclass
@@ -28,6 +27,5 @@ class RagResult:
     model: str
     latency_ms: dict[str, int]  # {"retrieve": .., "generate": .., "total": ..}
     error: str | None = None
-    # True when structured mode asked for JSON and got something unparseable,
-    # so this reply fell back to Phase 2's text matching. Never hidden.
+    # True when structured mode got unparseable JSON and fell back to text matching.
     format_fallback: bool = False

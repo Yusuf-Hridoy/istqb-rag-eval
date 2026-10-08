@@ -10,8 +10,7 @@ from istqb_rag.config import Settings
 
 
 class FakeEmbeddings(Embeddings):
-    """Deterministic vectors: every document matches e1, a query matches e1,
-    unless it contains 'zzz-unrelated' (matches the orthogonal e2 instead)."""
+    """Every document and query matches e1, unless it contains 'zzz-unrelated'."""
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [[1.0, 0.0, 0.0] for _ in texts]
@@ -23,8 +22,6 @@ class FakeEmbeddings(Embeddings):
 
 
 class SpyLLM(FakeListChatModel):
-    """FakeListChatModel that counts how many times the model was actually called."""
-
     n_calls: int = 0
 
     def _call(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
@@ -33,8 +30,6 @@ class SpyLLM(FakeListChatModel):
 
 
 class ThrowingLLM(FakeListChatModel):
-    """Fake LLM whose calls always raise."""
-
     def _call(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
         raise RuntimeError("boom")
 

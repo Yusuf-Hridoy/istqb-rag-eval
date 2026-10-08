@@ -1,9 +1,4 @@
-"""Ask one question from the terminal.
-
-Usage:
-    uv run python -m istqb_rag.cli "What is equivalence partitioning?"
-    uv run python -m istqb_rag.cli "What is equivalence partitioning?" --json
-"""
+"""Ask one question from the terminal."""
 
 import argparse
 import dataclasses

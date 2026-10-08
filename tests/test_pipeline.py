@@ -59,8 +59,8 @@ def test_status_mapping_normalizes_reply(store):
 
 
 def test_empty_store_returns_error():
-    # NOTE: chromadb's in-memory client is a process-wide singleton, so this
-    # collection needs a unique name to actually be empty.
+    # chromadb's in-memory client is process-wide, so this collection needs a
+    # unique name to actually be empty.
     empty = Chroma(
         collection_name="empty-store-test",
         embedding_function=FakeEmbeddings(),

@@ -1,8 +1,6 @@
-"""Eval step 1: ask the bot every question in the dataset and save its answers.
+"""Eval step 1: ask the bot every question and append each answer to answers.jsonl.
 
-Each RagResult is appended to the run's answers.jsonl as soon as it returns;
-rerunning skips rows already present, so a crash or rate limit never loses
-work. answers.jsonl is gitignored (it contains syllabus text in contexts).
+answers.jsonl is gitignored: its contexts hold syllabus text.
 """
 
 import dataclasses
@@ -62,7 +60,6 @@ def write_run_config(
         "min_relevance": settings.min_relevance,
         "chunk_size": settings.chunk_size,
         "chunk_overlap": settings.chunk_overlap,
-        # Phase 3: which experiment variant produced this run
         "chunking": settings.chunking,
         "collection": active_collection(settings),
         "answer_format": settings.answer_format,

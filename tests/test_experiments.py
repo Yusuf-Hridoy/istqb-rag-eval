@@ -1,4 +1,4 @@
-"""Offline tests for the Phase 3 additions: chunking, structured answers, metrics, compare."""
+"""Offline tests for chunking, structured answers, deterministic metrics and compare."""
 
 import dataclasses
 import math
@@ -18,11 +18,8 @@ from istqb_rag.ingest import find_headings, is_section_number_line, split_pages,
 from istqb_rag.structured_answer import parse_structured_reply
 from tests.conftest import make_settings
 
-# --- Defaults must reproduce Phase 2 ---------------------------------------
-
 
 def test_page_chunking_is_still_the_default():
-    """Chunking was not changed by Phase 4: section mode lost its experiment."""
     from istqb_rag.config import _str
 
     assert _str("CHUNKING", "page") in ("page", "section")
@@ -32,7 +29,6 @@ def test_page_chunking_is_still_the_default():
 
 
 def test_text_mode_still_reproduces_the_pilot_1_baseline():
-    """The default moved to structured in Phase 4; text must stay available."""
     import dataclasses
 
     text_mode = dataclasses.replace(make_settings(), answer_format="text")
@@ -41,14 +37,11 @@ def test_text_mode_still_reproduces_the_pilot_1_baseline():
 
 
 def test_section_mode_uses_its_own_collection():
-    """The baseline collection must never be touched by the experiment."""
     settings = make_settings()
     section = dataclasses.replace(settings, chunking="section")
     assert active_collection(section) == f"{settings.collection_name}_section"
     assert active_collection(section) != active_collection(settings)
 
-
-# --- Section chunking -------------------------------------------------------
 
 FAKE_PAGES = [
     Document(
@@ -135,15 +128,11 @@ def test_duplicate_section_numbers_keep_only_the_longest_body():
 
 
 def test_page_mode_output_is_unchanged_by_the_new_switch():
-    """The Phase 2 path must be byte-identical whatever the switch defaults to."""
     settings = make_settings()
     page_chunks = split_pages(FAKE_PAGES, settings)
     again = split_pages(FAKE_PAGES, dataclasses.replace(settings, chunking="page"))
     assert [c.page_content for c in page_chunks] == [c.page_content for c in again]
     assert all("section_id" not in c.metadata for c in page_chunks)
-
-
-# --- Structured answers -----------------------------------------------------
 
 
 def test_valid_json_maps_to_status_and_citations():
@@ -196,9 +185,6 @@ def test_page_numbers_are_cleaned():
         '{"status": "answered", "answer": "x", "cited_pages": [15, "17", -2, 15, true, "p"]}'
     )
     assert reply.cited_pages == [15, 17]
-
-
-# --- Deterministic metrics --------------------------------------------------
 
 
 def _row(row_id, **kw):
@@ -267,9 +253,6 @@ def test_citation_validity_skips_rows_with_nothing_cited():
     assert result["invalid_ids"] == ["q4"]
 
 
-# --- Cheap scoring ----------------------------------------------------------
-
-
 def test_only_metrics_narrows_what_the_judge_scores():
     assert metrics_for("in_scope", "answered", only=["context_recall"]) == ["context_recall"]
     assert metrics_for("in_scope", "no_context", only=["context_recall"]) == ["context_recall"]
@@ -278,9 +261,6 @@ def test_only_metrics_narrows_what_the_judge_scores():
     assert metrics_for("out_of_scope", "refused", only=["context_recall"]) == []
     # unrestricted behaviour is unchanged
     assert len(metrics_for("in_scope", "answered")) == 4
-
-
-# --- Compare runs -----------------------------------------------------------
 
 
 def _scores_row(row_id, status="answered", cp=0.8, cr=0.8, multi=False, **kw):
@@ -340,9 +320,6 @@ def test_compare_reports_rows_present_in_only_one_run():
     assert data["base_only_ids"] == []
 
 
-# --- Citation validity ------------------------------------------------------
-
-
 def test_citation_validity_all_pages_retrieved():
     rows = [_row("q1", cited_pages="15;17", retrieved_pages="15;17;20")]
     validity = citation_validity(rows)
@@ -365,11 +342,7 @@ def test_citation_validity_with_no_cited_rows_at_all():
     assert citation_validity([_row("q1", cited_pages="")])["rate"] is None
 
 
-# --- Unmeasured metrics vs failed metrics -----------------------------------
-
-
 def test_unmeasured_metric_is_null_with_n_zero():
-    """A metric the run never requested is absent, not a column of failures."""
     from istqb_rag.eval.step3_build_summary import build_summary
 
     rows = [_scores_row("q1", cr=0.8), _scores_row("q2", cr=0.6)]
@@ -382,7 +355,6 @@ def test_unmeasured_metric_is_null_with_n_zero():
 
 
 def test_unmeasured_metric_never_invalidates_a_run():
-    """Blank because unrequested must not read as 100% parse failure."""
     from istqb_rag.eval.step3_build_summary import build_summary, failed_nan_metrics
 
     rows = [_scores_row(f"q{i}", cr=0.8) for i in range(5)]
@@ -399,9 +371,6 @@ def test_measured_none_keeps_the_old_behaviour():
     summary = build_summary(rows)
     assert summary["overall"]["context_recall"]["unmeasured"] is False
     assert summary["overall"]["faithfulness"]["expected"] == 1  # still expected, still missing
-
-
-# --- Answer variance study --------------------------------------------------
 
 
 def _sample(run_id, statuses, hashes, fallbacks=0, cited=None):

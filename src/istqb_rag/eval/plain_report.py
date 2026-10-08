@@ -1,8 +1,4 @@
-"""Write a run's results as plain English, for someone who will not read JSON.
-
-`eval report` writes runs/<run-id>/report.md and `eval compare` writes
-runs/<new>/comparison.md. Both read committed files only and make no API calls.
-"""
+"""Write a run's results as plain English, for someone who will not read JSON."""
 
 import json
 from pathlib import Path
@@ -10,7 +6,6 @@ from pathlib import Path
 from istqb_rag.eval.deterministic_metrics import citation_rate
 from istqb_rag.eval.step2_judge_scores import METRIC_KEYS
 
-# What each judge score actually means, in one line.
 METRIC_MEANING = {
     "context_precision": (
         "Context precision",
@@ -71,9 +66,7 @@ def build_report(
         "",
         f"- Answer model: `{config.get('answer_model', '?')}`",
         f"- Judge model: `{config.get('judge_model', '?')}`",
-        # Runs made before these switches existed had only one behaviour each,
-        # so an absent key means the original: page chunking, text answers,
-        # prompt version 1.
+        # An absent key means an older run, which had only the original behaviour.
         f"- Chunking: {config.get('chunking') or 'page'} · answer format: "
         f"{config.get('answer_format') or 'text'} · prompt version: "
         f"{config.get('prompt_version', 1)}",

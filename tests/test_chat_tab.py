@@ -1,9 +1,4 @@
-"""Offline tests for the chat tab's pure helpers.
-
-The Streamlit module is loaded by path because `app/` is not an installed
-package. Only the helpers that contain real logic are tested; the layout itself
-was checked by reading it.
-"""
+"""Offline tests for the chat tab's pure helpers."""
 
 import importlib.util
 from pathlib import Path
@@ -27,9 +22,6 @@ def _chunk(page, text="Some text.", score=0.8):
     return RetrievedChunk(chunk_id=f"p{page}-1", page=page, text=text, score=score)
 
 
-# --- Only cited chunks are shown --------------------------------------------
-
-
 def test_only_cited_chunks_are_shown(app):
     contexts = [_chunk(15), _chunk(17), _chunk(48)]
     assert [c.page for c in app.cited_chunks(contexts, [15, 17])] == [15, 17]
@@ -45,12 +37,8 @@ def test_a_cited_page_that_was_not_retrieved_is_ignored(app):
 
 
 def test_every_chunk_on_a_cited_page_is_kept(app):
-    """Two chunks from the same cited page are both sources, not deduped."""
     contexts = [_chunk(15, "First."), _chunk(15, "Second."), _chunk(48)]
     assert len(app.cited_chunks(contexts, [15])) == 2
-
-
-# --- Source text is trimmed for display only --------------------------------
 
 
 def test_leading_partial_sentence_is_dropped(app):
@@ -92,9 +80,6 @@ def test_empty_text_is_safe(app):
     assert app.trim_to_sentences(None) == ""
 
 
-# --- Score caption ----------------------------------------------------------
-
-
 def test_score_caption_is_one_line(app):
     caption = app.score_caption({"faithfulness": 0.6666, "response_relevancy": 0.9123})
     assert caption == "Judge: faithfulness 0.67 · relevance 0.91"
@@ -105,8 +90,6 @@ def test_score_caption_handles_a_missing_metric(app):
     caption = app.score_caption({"faithfulness": 1.0})
     assert "faithfulness 1.00" in caption and "relevance —" in caption
 
-
-# --- Judge label ------------------------------------------------------------
 
 THRESHOLD = 0.80
 

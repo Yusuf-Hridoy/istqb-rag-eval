@@ -115,9 +115,6 @@ def test_missing_file_raises(tmp_path):
         load_golden(tmp_path / "nope.jsonl")
 
 
-# --- Dataset mix (Part A) --------------------------------------------------
-
-
 def _mix_rows():
     """A file matching the brief exactly: 60 in_scope, 5 not_in_syllabus, 10 out_of_scope."""
     per_chapter = {1: 10, 2: 8, 3: 6, 4: 18, 5: 14, 6: 4}
@@ -169,7 +166,6 @@ def test_unexpected_chapter_fails(tmp_path):
 
 
 def test_the_real_golden_file_matches_the_brief():
-    """The committed dataset itself must satisfy the mix."""
     from pathlib import Path
 
     path = Path(__file__).resolve().parents[1] / "data" / "golden_dataset.jsonl"
@@ -182,11 +178,7 @@ def test_the_real_golden_file_matches_the_brief():
     assert sum(1 for r in rows if r.multi_chunk) >= 8
 
 
-# --- Pilot subset and human-authored rows (amendment) ----------------------
-
-
 def test_human_rows_do_not_count_towards_the_mix(tmp_path):
-    """A user-added source: "human" row must not break the 60/5/10 check."""
     rows = _mix_rows()
     rows.append(_row(id="q900", source="human", chapter=4, section="4.2"))
     loaded = load_golden(_write(tmp_path, rows), include_unreviewed=True)
@@ -210,7 +202,6 @@ def test_pilot_must_be_a_boolean(tmp_path):
 
 
 def test_the_real_golden_file_has_the_agreed_pilot_subset():
-    """The committed dataset's 15 pilot rows match the shape the user asked for."""
     from collections import Counter
     from pathlib import Path
 
@@ -228,7 +219,6 @@ def test_the_real_golden_file_has_the_agreed_pilot_subset():
     assert Counter(r.k_level for r in in_scope) == {"K1": 4, "K2": 5, "K3": 2}
     assert sum(1 for r in pilot if r.multi_chunk) >= 3
     assert any("seven testing principles" in r.question.lower() for r in pilot)
-    # the 15 pilot rows have been verified; the other 60 are untouched
     assert all(r.reviewed and r.reviewed_by == "llm" for r in pilot)
     assert all(not r.reviewed for r in rows if not r.pilot)
 

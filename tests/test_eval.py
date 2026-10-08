@@ -246,9 +246,6 @@ def _write_scores(path, rows):
             writer.writerow(out)
 
 
-# --- Quota handling, resume correctness and the NaN guard (Part B) ---------
-
-
 class _QuotaError(Exception):
     """Stands in for GoogleRateLimitError / groq.RateLimitError."""
 
@@ -263,7 +260,6 @@ def test_is_quota_error_recognises_provider_wording():
 
 
 def test_quota_error_stops_scoring_and_saves_nothing(tmp_path):
-    """A quota failure stops the stage; the failing row is never written."""
     settings = make_settings(runs_dir=tmp_path / "runs")
     rows = [_row("q001"), _row("q002"), _row("q003")]
     run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
@@ -310,7 +306,6 @@ def test_rerun_after_quota_resumes_from_the_unscored_row(tmp_path):
 
 
 def test_api_error_nan_is_not_saved_but_parse_failure_nan_is(tmp_path):
-    """The two kinds of NaN are treated differently (brief: resume correctness)."""
     settings = make_settings(runs_dir=tmp_path / "runs")
     rows = [_row("q001"), _row("q002")]
     run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
@@ -406,9 +401,6 @@ def test_per_minute_limit_is_not_treated_as_daily_exhaustion():
     assert not is_daily_quota_error(ValueError("could not parse judge output"))
 
 
-# --- Group n and the small-sample flag (pilot amendment) -------------------
-
-
 def test_summary_carries_n_per_group():
     rows = [
         _score_row("q001", chapter="1"),
@@ -422,7 +414,6 @@ def test_summary_carries_n_per_group():
 
 
 def test_groups_below_min_n_are_flagged_but_still_reported():
-    """A thin group keeps its mean — it is marked, not dropped."""
     rows = [_score_row("q001", chapter="1", cp=0.8), _score_row("q002", chapter="2", cp=0.4)]
     summary = build_summary(rows)
     assert summary["by_chapter"]["1"]["n_too_small"] is True
@@ -444,7 +435,6 @@ def test_n_does_not_leak_into_overall_stats():
 
 
 def test_quota_stop_still_scores_rows_that_need_no_judge(tmp_path):
-    """Scope rows are decided by the routing table, so judge quota cannot block them."""
     settings = make_settings(runs_dir=tmp_path / "runs")
     rows = [
         _row("q001"),
@@ -480,8 +470,6 @@ def test_two_parse_failures_above_the_rate_still_invalidate():
     assert [k for k, _ in failed_nan_metrics(build_summary(rows))] == ["faithfulness"]
 
 
-# --- "Request too large": a 429 that retrying can never fix ----------------
-
 GROQ_TOO_LARGE = (
     "Error code: 429 - {'error': {'message': 'Request too large for model "
     "`qwen/qwen3.8-27b` in organization `org_x` service tier `on_demand` on output "
@@ -500,7 +488,6 @@ def test_request_too_large_is_recognised_and_not_a_rate_limit():
 
 
 def test_too_large_row_is_skipped_without_retries(tmp_path, monkeypatch):
-    """No backoff loop: one attempt, row not saved, the run carries on."""
     import istqb_rag.eval.step2_judge_scores as step2
 
     slept = []
@@ -531,7 +518,6 @@ def test_too_large_row_is_skipped_without_retries(tmp_path, monkeypatch):
 
 
 def test_retry_loop_does_not_sleep_or_retry_on_a_too_large_request(monkeypatch):
-    """The real retry policy short-circuits: one attempt, no backoff."""
     import istqb_rag.eval.step2_judge_scores as step2
 
     slept, calls = [], []
@@ -550,7 +536,6 @@ def test_retry_loop_does_not_sleep_or_retry_on_a_too_large_request(monkeypatch):
 
 
 def test_retry_loop_does_back_off_on_a_real_rate_limit(monkeypatch):
-    """Contrast: a genuine per-minute limit is still retried."""
     import istqb_rag.eval.step2_judge_scores as step2
 
     slept, calls = [], []
@@ -577,9 +562,6 @@ def test_judge_max_tokens_is_passed_to_the_groq_judge():
     assert build_judge(settings).max_tokens == settings.judge_max_tokens
 
 
-# --- Truncated verdicts are not parse failures ----------------------------
-
-
 def test_truncated_nan_is_counted_apart_from_a_parse_failure():
     rows = [
         _score_row("q001", f=math.nan, truncated=True),  # cap cut it short
@@ -594,7 +576,6 @@ def test_truncated_nan_is_counted_apart_from_a_parse_failure():
 
 
 def test_truncation_alone_never_invalidates_a_run():
-    """Every verdict truncated by our own cap: diagnosed, so the run still stands."""
     rows = [_score_row(f"q{i:03d}", f=math.nan, truncated=True) for i in range(5)]
     rows += [_score_row("q100", f=0.9)]
     summary = build_summary(rows)
@@ -627,15 +608,8 @@ def test_counter_flags_a_reply_the_cap_cut_short():
     assert counter.truncated
 
 
-# --- New runs must be self-contained ---------------------------------------
-
-
 def test_run_score_writes_the_columns_published_tables_need(tmp_path):
-    """retrieved_pages, format_fallback and answer_sha256 are written natively.
-
-    Published tables read only committed files, so a new run must carry these
-    without any backfill from the gitignored answers.jsonl.
-    """
+    """Published tables read committed files only, so a new run must carry these natively."""
     settings = make_settings(runs_dir=tmp_path / "runs")
     rows = [_row("q001")]
     run_generate("test-run", rows, lambda q: _result(row_id=q), settings=settings)
@@ -653,7 +627,6 @@ def test_run_score_writes_the_columns_published_tables_need(tmp_path):
 
 
 def test_quick_report_writes_the_same_columns(tmp_path):
-    """The judge-free writer must match, since exp2 and the repeats use it."""
     from istqb_rag.eval.step2_judge_scores import write_judge_free_scores
 
     settings = make_settings(runs_dir=tmp_path / "runs")

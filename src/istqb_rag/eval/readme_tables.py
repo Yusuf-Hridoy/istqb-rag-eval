@@ -1,10 +1,4 @@
-"""Build the README's results tables from the run files, so no number is hand-typed.
-
-Each table lives in the README between a pair of markers. `eval readme-tables`
-rewrites the blocks; `scripts/check_results_integrity.py` regenerates them in
-memory and fails CI if the file differs. A number edited by hand therefore
-cannot survive a pull request.
-"""
+"""Build the README's results tables from the run files, so no number is hand-typed."""
 
 import json
 from pathlib import Path
@@ -51,7 +45,6 @@ def _rows(settings: Settings, run_id: str) -> list[dict]:
 
 
 def _fmt(value: float | None, n: int | None = None) -> str:
-    """Render a number, or NA when it is missing. Never raises on None."""
     if value is None:
         return NA
     return f"{value:.3f}" if n is None else f"{value:.3f} (n={n})"
@@ -238,10 +231,5 @@ def write_readme_tables(readme_path: Path, settings: Settings | None = None) -> 
 
 
 def cells_with_missing_values(tables: dict[str, str]) -> list[str]:
-    """Table names whose rendered text contains a missing value.
-
-    A published table must never ship an "n/a": it means a number the README
-    claims to report could not be computed from the committed run files. The
-    integrity check turns this into a build failure rather than a quiet gap.
-    """
+    """Table names containing "n/a": a published number the run files could not supply."""
     return sorted(name for name, body in tables.items() if NA in body)

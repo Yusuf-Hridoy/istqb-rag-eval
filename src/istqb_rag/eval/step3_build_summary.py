@@ -11,9 +11,8 @@ from istqb_rag.eval.step2_judge_scores import METRIC_KEYS, metrics_for
 
 ERROR_RATE_LIMIT = 0.05
 NAN_RATE_LIMIT = 0.10
-# A rate alone is meaningless on a small run: with 8 judged rows a single
-# unparseable verdict is already 12.5%. A lone failure is noise; two or more
-# above the rate is the "judge mostly failed" case the guard exists to catch.
+# A rate alone is meaningless on a small run: with 8 judged rows one unparseable
+# verdict is already 12.5%, which is noise, not a failed judge.
 MIN_NAN_FAILURES = 2
 WORST_N = 10
 SHORT_METRIC = {
@@ -47,21 +46,16 @@ def load_scores(scores_path: Path) -> list[dict]:
 
 
 def _expects(row: dict, key: str) -> bool:
-    """Whether the routing table says this row should have had this metric."""
     return key in metrics_for(row["type"], row["status"])
 
 
 def _metric_stats(rows: list[dict], measured: list[str] | None = None) -> dict:
-    """Means and NaN counts per metric.
-
-    NaN is only counted for rows the routing table says should have been
-    judged — a row that was never meant to get a metric is not a failure.
-    """
+    """Means and NaN counts per metric, counted only for rows the routing table expects."""
     stats = {}
     for key in METRIC_KEYS:
         if measured is not None and key not in measured:
-            # The run never asked the judge for this metric. Reported as absent,
-            # not as a column of failures, and excluded from the validity guard.
+            # Never requested, so it is absent rather than failed, and the validity
+            # guard must ignore it.
             stats[key] = {
                 "mean": None,
                 "scored": 0,
@@ -77,9 +71,8 @@ def _metric_stats(rows: list[dict], measured: list[str] | None = None) -> dict:
         expected = [r for r in rows if _expects(r, key)]
         values = [r[key] for r in expected if not math.isnan(r.get(key, math.nan))]
         missing = [r for r in expected if math.isnan(r.get(key, math.nan))]
-        # A verdict our own JUDGE_MAX_TOKENS cut short is a known configuration
-        # artifact with a named fix; only an unexplained unreadable verdict is a
-        # parse failure, and only those feed the validity guard.
+        # A verdict JUDGE_MAX_TOKENS cut short is our own configuration, not a parse
+        # failure; only unexplained unreadable verdicts feed the validity guard.
         truncated = [r for r in missing if r.get("judge_truncated")]
         parse_failed = [r for r in missing if not r.get("judge_truncated")]
         stats[key] = {
@@ -99,12 +92,6 @@ def _metric_stats(rows: list[dict], measured: list[str] | None = None) -> dict:
 
 
 def _grouped(rows: list[dict], field: str, measured: list[str] | None = None) -> dict:
-    """Per-group metric stats, each carrying the group's own row count.
-
-    ``n`` matters on a small pilot: a chapter mean over two rows is not
-    comparable to one over eighteen, and ``n_too_small`` says so explicitly so
-    the report and the dashboard do not have to re-derive the rule.
-    """
     groups: dict[str, list[dict]] = {}
     for row in rows:
         key = str(row[field])
@@ -252,16 +239,7 @@ def _print_table(summary: dict) -> None:
 
 
 def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tuple[str, float]]:
-    """Metrics whose *parse* failures are both proportionally and absolutely bad.
-
-    Only unexplained unreadable verdicts count. A verdict our own
-    JUDGE_MAX_TOKENS cut short is a diagnosed configuration artifact, reported
-    separately as ``nan_truncated``, and does not invalidate a run.
-
-    Both conditions must hold: the parse-failure rate is above ``limit`` *and*
-    at least ``MIN_NAN_FAILURES`` verdicts failed to parse. See
-    MIN_NAN_FAILURES for why the count matters as well as the rate.
-    """
+    """Metrics whose parse failures are both above ``limit`` and at least MIN_NAN_FAILURES."""
     return [
         (key, stats["parse_failure_rate"])
         for key, stats in summary["overall"].items()
@@ -272,12 +250,7 @@ def failed_nan_metrics(summary: dict, limit: float = NAN_RATE_LIMIT) -> list[tup
 
 
 def run_report(run_id: str, *, settings: Settings | None = None) -> dict:
-    """Aggregate a run into summary.json.
-
-    Raises RunInvalid — without writing summary.json — when any metric's
-    parse-failure rate is above NAN_RATE_LIMIT, so a judge that mostly failed
-    to produce readable output can never be mistaken for a valid baseline.
-    """
+    """Aggregate a run into summary.json, or raise RunInvalid and write nothing."""
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     rows = load_scores(run_dir / "scores.csv")

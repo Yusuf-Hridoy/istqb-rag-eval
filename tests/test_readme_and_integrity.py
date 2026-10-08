@@ -13,9 +13,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CHECK_SCRIPT = REPO_ROOT / "scripts" / "check_results_integrity.py"
 
 
-# --- Generated README tables ------------------------------------------------
-
-
 def test_apply_tables_fills_the_marked_block():
     readme = f"# Title\n\n{marker('baseline')}\nold numbers\n{marker('baseline', True)}\n\nend\n"
     out = apply_tables(readme, {"baseline": "| new | numbers |"})
@@ -25,14 +22,12 @@ def test_apply_tables_fills_the_marked_block():
 
 
 def test_apply_tables_is_idempotent():
-    """Running the generator twice must not change the file again."""
     readme = f"{marker('baseline')}\nx\n{marker('baseline', True)}\n"
     once = apply_tables(readme, {"baseline": "table"})
     assert apply_tables(once, {"baseline": "table"}) == once
 
 
 def test_a_hand_edited_number_does_not_survive_regeneration():
-    """The whole point of the gate: typed numbers get overwritten and detected."""
     tables = {"baseline": "| Context recall | 0.778 |"}
     generated = apply_tables(f"{marker('baseline')}\n\n{marker('baseline', True)}\n", tables)
     tampered = generated.replace("0.778", "0.999")
@@ -62,9 +57,6 @@ def test_the_real_readme_is_in_sync_with_the_run_files():
     assert apply_tables(original, tables) == original
 
 
-# --- The integrity check itself ---------------------------------------------
-
-
 def _run_check(cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(CHECK_SCRIPT)],
@@ -92,7 +84,6 @@ def _fake_repo(tmp_path: Path) -> Path:
 
 
 def test_check_functions_detect_each_problem(tmp_path, monkeypatch):
-    """Drive the check's functions directly against a fake repo."""
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("integrity_check", CHECK_SCRIPT)
@@ -158,9 +149,6 @@ def test_reviewed_row_without_reviewed_by_fails(tmp_path, monkeypatch):
     assert "reviewed_by" in problems[0]
 
 
-# --- Nothing published may depend on answers.jsonl --------------------------
-
-
 def test_tables_build_without_any_answers_file(tmp_path, monkeypatch):
     """Simulate a clean checkout: scores.csv present, answers.jsonl absent."""
     import shutil
@@ -186,12 +174,11 @@ def test_tables_build_without_any_answers_file(tmp_path, monkeypatch):
     clean = dataclasses.replace(get_settings(), runs_dir=runs)
     tables = build_tables(clean)
 
-    # every table builds, and none of them reports a hole
     assert set(tables) == {"baseline", "experiments", "variance"}
     assert cells_with_missing_values(tables) == []
     assert "0.778" in tables["experiments"]  # pilot-1 context recall
-    assert "1.000 (n=8)" in tables["experiments"]  # pilot-1 citation validity, was the crash
-    # the variance table needs answer hashes, which now come from scores.csv
+    assert "1.000 (n=8)" in tables["experiments"]  # pilot-1 citation validity
+    # the variance table needs answer hashes, which come from scores.csv
     assert "identical answer every run" in tables["variance"]
     assert "4 of 15" in tables["variance"]
 

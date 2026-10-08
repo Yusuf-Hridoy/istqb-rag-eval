@@ -1,20 +1,4 @@
-"""Eval step 2: have the judge model score the saved answers, and record the scores.
-
-Two stages exist so answers are generated once and can be re-scored later
-(Phase 3's judge-variance check depends on it).
-
-Scoring is routed per row (see ``metrics_for``) and each result is appended to
-scores.csv immediately, with the same resume behaviour as stage 1. scores.csv
-is committed and holds IDs, statuses and scores only — never question,
-answer or syllabus text.
-
-Two kinds of NaN are deliberately kept apart:
-
-* an **API error** (the judge never answered) means the row was not measured.
-  It is not written, so a rerun retries it.
-* a **parse failure** (the judge answered, Ragas could not read it) is a real
-  measurement outcome. It is written as an empty cell and counted.
-"""
+"""Eval step 2: the judge scores the saved answers into scores.csv."""
 
 import csv
 import hashlib
@@ -57,8 +41,7 @@ SCORES_COLUMNS = [
     "judge_truncated",
     "retrieved_pages",
     "format_fallback",
-    # SHA-256 of the answer text. A hash, never the text, so repeated runs can be
-    # compared for stability from committed files alone — see answer_variance.
+    # A hash, never the text, so no committed file holds answer text.
     "answer_sha256",
 ]
 
@@ -92,17 +75,12 @@ class JudgeQuotaExhausted(RuntimeError):
 
 
 def is_quota_error(exc: BaseException) -> bool:
-    """True when an exception is the judge refusing on rate-limit grounds."""
     text = f"{type(exc).__name__} {exc}".lower()
     return any(marker in text for marker in _QUOTA_MARKERS)
 
 
 def retry_after_seconds(exc: BaseException) -> float | None:
-    """How long the provider asked us to wait, in seconds, if it said so.
-
-    Groq phrases it as "try again in 720ms" / "in 1m30s"; Gemini returns a
-    retryDelay like "45700s".
-    """
+    """How long the provider asked us to wait, in seconds, if it said so at all."""
     text = str(exc)
     patterns = [
         r"try again in\s+([0-9hms.]+)",
@@ -132,23 +110,13 @@ def retry_after_seconds(exc: BaseException) -> float | None:
 
 
 def is_request_too_large(exc: BaseException) -> bool:
-    """True when one request exceeds the provider's per-request ceiling.
-
-    Groq reports this as a 429 alongside genuine rate limits, but it is not a
-    rate limit: the same request will be rejected every time, however long we
-    wait. It is fixed by lowering JUDGE_MAX_TOKENS, not by backing off.
-    """
+    """A 429 that no wait fixes: only a lower JUDGE_MAX_TOKENS does."""
     text = f"{type(exc).__name__} {exc}".lower()
     return any(marker in text for marker in _TOO_LARGE_MARKERS)
 
 
 def is_daily_quota_error(exc: BaseException) -> bool:
-    """True only for a cap this run cannot wait out — not a per-minute bucket.
-
-    A per-minute token bucket reports a wait of seconds and must be retried;
-    treating it as exhaustion would stop the run every few rows and no baseline
-    would ever finish.
-    """
+    """True only for a cap this run cannot wait out — a per-minute bucket must be retried."""
     if not is_quota_error(exc) or is_request_too_large(exc):
         return False
     text = f"{type(exc).__name__} {exc}".lower()
@@ -160,8 +128,6 @@ def is_daily_quota_error(exc: BaseException) -> bool:
 
 @dataclass
 class ScoreOutcome:
-    """What one row's scoring produced, and whether it can be trusted."""
-
     values: dict[str, float] = field(default_factory=dict)
     calls: int = 0
     prompt_tokens: int = 0
@@ -176,17 +142,11 @@ class ScoreOutcome:
         return self.api_error is None and not self.quota_exhausted
 
 
-# (question, response, reference, contexts, metric_keys) -> ScoreOutcome
 ScorerFn = Callable[[str, str, str | None, list[str], list[str]], ScoreOutcome]
 
 
 class JudgeCallCounter(BaseCallbackHandler):
-    """Counts judge calls and tokens, and records the errors Ragas swallows.
-
-    Ragas turns a failed judge call into a NaN score, which is
-    indistinguishable from a parse failure. Watching on_llm_error is what lets
-    the two be told apart.
-    """
+    """Records the judge errors Ragas would otherwise swallow into an unexplained NaN."""
 
     def __init__(self) -> None:
         self.calls = 0
@@ -213,9 +173,8 @@ class JudgeCallCounter(BaseCallbackHandler):
                     usage = meta.get("token_usage") or usage
         self.prompt_tokens += int(usage.get("prompt_tokens", 0) or 0)
         self.completion_tokens += int(usage.get("completion_tokens", 0) or 0)
-        # finish_reason "length" means JUDGE_MAX_TOKENS cut the verdict off. That
-        # is our configuration truncating a reply, not the judge producing
-        # unreadable output, and the two are counted apart downstream.
+        # finish_reason "length" is JUDGE_MAX_TOKENS cutting the verdict off, not the
+        # judge producing unreadable output; downstream counts the two apart.
         for generations in getattr(response, "generations", []) or []:
             for gen in generations:
                 info = getattr(gen, "generation_info", None) or {}
@@ -239,11 +198,7 @@ class JudgeCallCounter(BaseCallbackHandler):
 
 
 def metrics_for(row_type: str, status: str, only: list[str] | None = None) -> list[str]:
-    """Which Ragas metrics a row gets, per the routing table.
-
-    ``only`` narrows the result to the named metrics, for runs that need one
-    cheap metric rather than the full set (Phase 3's judge budget).
-    """
+    """Which Ragas metrics a row gets, per the routing table."""
     if row_type != "in_scope" or status == "error":
         return []
     metrics = list(RETRIEVAL_METRICS)
@@ -255,11 +210,7 @@ def metrics_for(row_type: str, status: str, only: list[str] | None = None) -> li
 
 
 def scope_verdict(row_type: str, status: str) -> tuple[bool | None, str]:
-    """Correctness for scope rows (in_scope rows get (None, "")).
-
-    Returns (correct, flag); a not_in_syllabus row that was answered is a
-    possible hallucination.
-    """
+    """(correct, flag) for a scope row; in_scope rows get (None, "")."""
     if row_type == "out_of_scope":
         return (status in ("refused", "no_context"), "")
     if row_type == "not_in_syllabus":
@@ -270,13 +221,7 @@ def scope_verdict(row_type: str, status: str) -> tuple[bool | None, str]:
 
 
 class _FastEmbedForRagas(Embeddings):
-    """FastEmbed embeddings with a string ``.model`` for Ragas.
-
-    Ragas 0.4.3 telemetry builds an EmbeddingUsageEvent with
-    ``getattr(embeddings, "model", None)`` and pydantic requires a string.
-    FastEmbedEmbeddings.model is a TextEmbedding object, so wrapping it
-    directly makes every embedding-backed metric return NaN.
-    """
+    """FastEmbed with a string ``.model``; without it every Ragas metric returns NaN."""
 
     def __init__(self, model_name: str) -> None:
         from langchain_community.embeddings import FastEmbedEmbeddings
@@ -292,12 +237,7 @@ class _FastEmbedForRagas(Embeddings):
 
 
 def score_with_retries(run_once, read_scores, counter) -> ScoreOutcome:
-    """Run one row's evaluation, retrying only the errors that waiting can fix.
-
-    ``run_once`` performs a single Ragas evaluation; ``read_scores`` turns its
-    result into {metric: value}. Kept module-level and callable-driven so the
-    retry policy is testable without a judge or a network.
-    """
+    """Run one row's evaluation, retrying only the errors that waiting can fix."""
     for attempt in range(1, MAX_ROW_ATTEMPTS + 1):
         counter.reset()
         result = None
@@ -307,8 +247,7 @@ def score_with_retries(run_once, read_scores, counter) -> ScoreOutcome:
         except Exception as exc:  # noqa: BLE001 — any judge failure is "not measured"
             error = exc
         else:
-            # Ragas swallows per-call failures into NaN; the callback is the
-            # only place they are still visible.
+            # Ragas swallows per-call failures into NaN; the callback still sees them.
             error = counter.errors[0] if counter.errors else None
 
         if error is None:
@@ -346,11 +285,7 @@ def score_with_retries(run_once, read_scores, counter) -> ScoreOutcome:
 
 
 def build_judge(settings: Settings):
-    """The judge chat model, chosen by JUDGE_MODEL's provider prefix.
-
-    Gemini names route to Google; everything else is a Groq model id. Either
-    way the judge is a different model family from the answer model.
-    """
+    """The judge chat model, chosen by JUDGE_MODEL's provider prefix."""
     if settings.judge_model.startswith("gemini"):
         from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -364,9 +299,8 @@ def build_judge(settings: Settings):
     key = settings.groq_api_key
     if not key:
         raise ValueError("GROQ_API_KEY is not set — add it to .env (see .env.example).")
-    # Groq sizes a request from max_tokens, not from what the reply actually
-    # uses, so an uncapped judge request is rejected outright against the free
-    # tier's per-minute output budget. See DECISIONS.md.
+    # Groq sizes a request from max_tokens, not from the reply, so an uncapped
+    # judge request is rejected outright against the free tier's output budget.
     return ChatGroq(
         model=settings.judge_model,
         temperature=0,
@@ -387,9 +321,8 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
 
     judge = LangchainLLMWrapper(build_judge(settings))
     embeddings = LangchainEmbeddingsWrapper(_FastEmbedForRagas(settings.embed_model))
-    # Ragas' answer_relevancy asks the judge for `strictness` candidates in one
-    # call (n=3); the Gemini API rejects n>1 with "Multiple candidates is not
-    # enabled for this model". strictness=1 is the supported equivalent.
+    # answer_relevancy asks for `strictness` candidates in one call (n=3); Gemini
+    # rejects n>1, and strictness=1 is the supported equivalent.
     answer_relevancy.strictness = 1
     # max_workers=1: one row's ~11k tokens already exceeds the judge's
     # per-minute token bucket, so parallel rows only cause 429s.
@@ -429,8 +362,7 @@ def make_scorer(settings: Settings | None = None) -> ScorerFn:
             )
 
         def read_scores(result):
-            # Ragas names the column after the metric object, which is not always
-            # our key: response_relevancy is Ragas' answer_relevancy.
+            # Ragas names the column after the metric object: ours is its answer_relevancy.
             row = result.to_pandas().iloc[0]
             return {k: float(row[ragas_metrics[k].name]) for k in metric_keys}
 
@@ -467,12 +399,7 @@ def answer_digest(text: str | None) -> str:
 
 
 def record_metrics_scored(run_dir: Path, metrics: list[str] | None) -> None:
-    """Note in config.json which judge metrics this run actually asked for.
-
-    Without it, a metric a run never requested is indistinguishable from one the
-    judge failed on every row: both are a column of blanks. The report needs the
-    difference — the first is "unmeasured", the second would invalidate the run.
-    """
+    """Record which metrics were requested, so unmeasured never reads as judge failure."""
     config_path = run_dir / "config.json"
     if not config_path.exists():
         return
@@ -487,17 +414,13 @@ def write_judge_free_scores(
     *,
     settings: Settings | None = None,
 ) -> dict:
-    """Write scores.csv with every judge-free column filled and metrics blank.
-
-    Used by `eval quick`, which answers Experiment 2's question entirely from
-    status, citations and fallbacks — none of which need a judge.
-    """
+    """Write scores.csv with every judge-free column filled and the metrics blank."""
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     answers = _load_answers(run_dir / "answers.jsonl")
     scores_path = run_dir / "scores.csv"
 
-    record_metrics_scored(run_dir, [])  # judge-free by construction
+    record_metrics_scored(run_dir, [])
     written: list[dict] = []
     status_counts: dict[str, int] = {}
     fallbacks = 0
@@ -545,12 +468,7 @@ def run_score(
     settings: Settings | None = None,
     only_metrics: list[str] | None = None,
 ) -> dict[str, int]:
-    """Score every answered row, appending each scores.csv line immediately.
-
-    Raises JudgeQuotaExhausted as soon as the judge reports a quota failure,
-    without writing that row, so rerunning the same command picks up where it
-    stopped.
-    """
+    """Score every answered row, appending each scores.csv line immediately."""
     settings = settings or get_settings()
     run_dir = settings.runs_dir / run_id
     answers = _load_answers(run_dir / "answers.jsonl")
@@ -575,10 +493,8 @@ def run_score(
             if result is None:
                 continue
             metrics = metrics_for(row.type, result.status, only=only_metrics)
-            # Out-of-scope and not-in-syllabus rows are judged by the routing
-            # table alone, so judge quota cannot affect them. Keep scoring them
-            # after a quota stop, or scope accuracy would be unmeasurable on any
-            # day the judge budget runs out.
+            # Scope rows need no judge, so a quota stop must not skip them — otherwise
+            # scope accuracy is unmeasurable on any day the judge budget runs out.
             if quota_error and metrics:
                 continue
             outcome = ScoreOutcome()
@@ -615,8 +531,7 @@ def run_score(
                 "latency_ms": result.latency_ms["total"],
                 "possible_hallucination": flag,
                 "judge_truncated": "true" if outcome.truncated else "",
-                # pages only, never text: lets page hit rate be computed from the
-                # committed file instead of the gitignored answers.jsonl
+                # pages only, never text, so page hit rate comes from a committed file
                 "retrieved_pages": ";".join(
                     str(p) for p in dict.fromkeys(c.page for c in result.contexts)
                 ),

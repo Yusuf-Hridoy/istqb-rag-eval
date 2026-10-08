@@ -1,8 +1,4 @@
-"""The RAG pipeline. ``answer(question)`` is the only entry point.
-
-Standard retrieve-then-generate with a single LLM call. Always returns a
-RagResult and never raises: errors become status="error" with a message.
-"""
+"""The RAG pipeline; ``answer(question)`` is the only entry point and never raises."""
 
 import re
 import time
@@ -24,9 +20,7 @@ _EMPTY_STORE_MESSAGE = "Vector store is empty — run: uv run python -m istqb_ra
 
 
 def parse_cited_pages(text: str) -> list[int]:
-    """Extract page numbers from ``[p. N]`` citations, deduplicated, in order.
-
-    Also accepts the CJK brackets (【p. N】) some models emit."""
+    """Extract page numbers from ``[p. N]`` citations, deduplicated, in order."""
     pages: list[int] = []
     for match in _CITATION_RE.finditer(text):
         page = int(match.group(1))
@@ -36,7 +30,6 @@ def parse_cited_pages(text: str) -> list[int]:
 
 
 def _normalize(text: str) -> str:
-    """Strip whitespace, surrounding quotes and trailing punctuation, casefold."""
     return text.strip().strip(_QUOTES).rstrip(".!?").strip().casefold()
 
 
@@ -115,7 +108,6 @@ def answer(
     except Exception as exc:
         return _error_result(question, model, _ms(t0), exc)
 
-    # 1. Retrieve
     t_retrieve = time.perf_counter()
     try:
         scored = store.similarity_search_with_relevance_scores(question, k=settings.top_k)
@@ -133,7 +125,7 @@ def answer(
         for doc, score in scored
     ]
 
-    # 2. Relevance floor — below it, no LLM call
+    # Below the relevance floor there is no LLM call at all.
     best = max((c.score for c in contexts), default=0.0)
     if best < settings.min_relevance:
         return RagResult(
@@ -146,7 +138,6 @@ def answer(
             latency_ms={"retrieve": retrieve_ms, "generate": 0, "total": _ms(t0)},
         )
 
-    # 3. Generate
     structured = settings.answer_format == "structured"
     if structured:
         system = prompts.STRUCTURED_SYSTEM_PROMPT.format(context=prompts.format_context(contexts))
@@ -168,8 +159,8 @@ def answer(
         )
     generate_ms = _ms(t_generate)
 
-    # 4. Status: the model states it in structured mode, otherwise it is inferred
-    #    from the two fixed texts (the Phase 2 behaviour).
+    # In structured mode the model states its own status; otherwise it is inferred
+    # from the two fixed texts, which a differently-worded refusal defeats.
     fallback = False
     if structured:
         parsed = parse_structured_reply(reply)

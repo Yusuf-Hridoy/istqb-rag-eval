@@ -54,13 +54,7 @@ class Settings:
 
 
 def get_settings() -> Settings:
-    """Build Settings from the environment (with .env loaded).
-
-    FIRST_CONTENT_PAGE / LAST_CONTENT_PAGE defaults (14–63) match the printed
-    page numbers of ISTQB_CTFL_Syllabus_v4.0.1.pdf: page 14 starts Chapter 1,
-    page 63 is the last content page before Appendix A (which starts on page
-    64). Override in .env for a different PDF.
-    """
+    """Build Settings from the environment (with .env loaded)."""
     return Settings(
         groq_api_key=os.getenv("GROQ_API_KEY", ""),
         answer_model=_str("ANSWER_MODEL", "openai/gpt-oss-120b"),
@@ -70,13 +64,13 @@ def get_settings() -> Settings:
         chunk_size=_int("CHUNK_SIZE", 1000),
         chunk_overlap=_int("CHUNK_OVERLAP", 150),
         syllabus_path=_path("SYLLABUS_PATH", "data/raw/ctfl_syllabus_v4.pdf"),
+        # 14–63 are the content pages of ISTQB_CTFL_Syllabus_v4.0.1.pdf; override for another PDF.
         first_content_page=_int("FIRST_CONTENT_PAGE", 14),
         last_content_page=_int("LAST_CONTENT_PAGE", 63),
         chroma_dir=_path("CHROMA_DIR", ".chroma"),
         collection_name=_str("COLLECTION_NAME", "ctfl_v4"),
         judge_model=_str("JUDGE_MODEL", "qwen/qwen3.8-27b"),
         judge_max_tokens=_int("JUDGE_MAX_TOKENS", 950),
-        # Phase 3 switches. Both defaults reproduce the Phase 2 baseline exactly.
         chunking=_str("CHUNKING", "page"),
         prompt_version=_int("PROMPT_VERSION", 2),
         score_ok_threshold=_float("SCORE_OK_THRESHOLD", 0.80),
@@ -87,11 +81,7 @@ def get_settings() -> Settings:
 
 
 def active_collection(settings: Settings) -> str:
-    """Which Chroma collection this chunking mode uses.
-
-    Section chunking writes to its own collection so the Phase 2 baseline
-    collection is never touched and pilot-1 stays reproducible.
-    """
+    """Which Chroma collection this chunking mode uses; section mode gets its own."""
     if settings.chunking == "section":
         return f"{settings.collection_name}_section"
     return settings.collection_name

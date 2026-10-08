@@ -1,10 +1,4 @@
-"""Streamlit chat UI for the ISTQB CTFL assistant.
-
-Run with: uv run streamlit run app/streamlit_app.py
-
-Chat only. Evaluation is a command-line job that writes plain report files to
-runs/<run-id>/report.md.
-"""
+"""Streamlit chat UI for the ISTQB CTFL assistant."""
 
 import re
 import sys
@@ -24,7 +18,6 @@ EXAMPLE_QUESTIONS = [
     "What does risk-based testing involve?",
 ]
 
-# A sentence ending followed by whitespace. Used only to tidy what is shown.
 _SENTENCE_END = re.compile(r"[.!?][\"')\]]?\s")
 
 
@@ -36,20 +29,13 @@ def get_pipeline():
 
 @st.cache_resource
 def get_scorer():
-    """One Ragas scorer for the whole session, reused from the eval code."""
     from istqb_rag.eval.step2_judge_scores import make_scorer
 
     return make_scorer()
 
 
 def trim_to_sentences(text: str) -> str:
-    """Trim a chunk to whole sentences, for display only.
-
-    A retrieved chunk is cut by character count, so it often starts mid-sentence
-    and ends mid-word. This drops the dangling halves so a quoted source reads
-    properly. The model still receives the untrimmed chunk — this never changes
-    what was retrieved or sent.
-    """
+    """Trim a chunk to whole sentences for display; the model still gets the full chunk."""
     cleaned = " ".join((text or "").split())
     if not cleaned:
         return ""
@@ -74,7 +60,6 @@ def cited_chunks(contexts, cited_pages):
     return [c for c in contexts if c.page in cited]
 
 
-# The two scores a reference-free judge can produce, and what each one means.
 SCORE_MEANINGS = (
     ("faithfulness", "faithfulness", "Every claim is backed by the source"),
     ("response_relevancy", "relevance", "The answer addresses the question"),
@@ -84,12 +69,7 @@ CHECK_LABEL = "Check this answer"
 
 
 def judge_verdict(values: dict, threshold: float) -> dict:
-    """Turn two judge scores into a label a reader can act on.
-
-    "Check this answer" rather than "Fail": the judge is itself a model, and a
-    low score means read the answer against its source, not that the answer is
-    wrong. A missing score is also a reason to check, never a pass.
-    """
+    """Label two judge scores; a missing score is a reason to check, never a pass."""
     missing = [label for key, label, _ in SCORE_MEANINGS if values.get(key) is None]
     if missing:
         return {"label": CHECK_LABEL, "ok": False, "missing": missing}
@@ -98,8 +78,6 @@ def judge_verdict(values: dict, threshold: float) -> dict:
 
 
 def score_caption(values: dict) -> str:
-    """One line: the two scores a reference-free judge can produce."""
-
     def fmt(key):
         value = values.get(key)
         return "—" if value is None else f"{value:.2f}"
@@ -108,7 +86,6 @@ def score_caption(values: dict) -> str:
 
 
 def _judge_available(settings) -> bool:
-    """The judge needs whichever key its provider uses."""
     import os
 
     if settings.judge_model.startswith("gemini"):
@@ -117,7 +94,6 @@ def _judge_available(settings) -> bool:
 
 
 def _render_score(result, settings) -> None:
-    """Score an answered reply, when scoring is on and a judge key exists."""
     if result.status != "answered":
         return  # a refusal or a not-found has nothing to be faithful to
     if not st.session_state.get("auto_score", True):
@@ -141,10 +117,7 @@ def _render_score(result, settings) -> None:
 
 
 def _render_judge_box(values: dict, threshold: float) -> None:
-    """The Judge box: a label, both scores with their meaning, and a caveat.
-
-    Colour is never the only signal — the label is always written out.
-    """
+    """The Judge box; the label is always written out, so colour is never the only signal."""
     verdict = judge_verdict(values, threshold)
     lines = [f"**Judge: {verdict['label']}**", ""]
     for key, label, meaning in SCORE_MEANINGS:
@@ -159,7 +132,7 @@ def _render_judge_box(values: dict, threshold: float) -> None:
             + (" was" if len(verdict["missing"]) == 1 else " were")
             + " not scored."
         )
-    box = st.info if verdict["ok"] else st.warning  # blue for OK, orange for Check
+    box = st.info if verdict["ok"] else st.warning
     box("\n".join(lines))
     st.caption(
         f"OK: both scores at or above {threshold:.2f} · "
@@ -215,7 +188,7 @@ def main() -> None:
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
             if message["role"] == "assistant":
-                _render_result(message["result"])  # prints the answer itself
+                _render_result(message["result"])
             else:
                 st.markdown(message["content"])
 

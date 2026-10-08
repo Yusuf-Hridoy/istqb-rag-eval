@@ -1,8 +1,4 @@
-"""Golden dataset loading and validation.
-
-data/golden_dataset.jsonl holds one JSON object per line: questions and short
-paraphrased reference answers only — never copied syllabus passages.
-"""
+"""Golden dataset loading and validation."""
 
 import json
 from collections import Counter
@@ -17,8 +13,7 @@ RowType = Literal["in_scope", "not_in_syllabus", "out_of_scope"]
 ALLOWED_TYPES = {"in_scope", "not_in_syllabus", "out_of_scope"}
 ALLOWED_K_LEVELS = {"K1", "K2", "K3"}
 ALLOWED_SOURCES = {"llm", "human"}
-# Optional: who checked the row against the syllabus page. Absent on
-# unreviewed rows, so it is deliberately not in REQUIRED_KEYS.
+# Absent on unreviewed rows, so deliberately not in REQUIRED_KEYS.
 ALLOWED_REVIEWERS = {"llm", "human"}
 REQUIRED_KEYS = {
     "id",
@@ -40,9 +35,7 @@ class DatasetError(ValueError):
     """Raised when data/golden_dataset.jsonl fails validation."""
 
 
-# The mix the Phase 2 brief specifies. The dataset is the product of this
-# project, so drifting from it silently would quietly change what the baseline
-# measures.
+# Drifting from this mix silently would change what the baseline measures.
 EXPECTED_TYPE_COUNTS = {"in_scope": 60, "not_in_syllabus": 5, "out_of_scope": 10}
 EXPECTED_CHAPTER_COUNTS = {1: 10, 2: 8, 3: 6, 4: 18, 5: 14, 6: 4}
 
@@ -146,11 +139,7 @@ def _validate_row(raw: object, lineno: int) -> GoldenRow:
 
 
 def dataset_counts(rows: list[GoldenRow]) -> tuple[dict[str, int], dict[int, int]]:
-    """(rows per type, in-scope rows per chapter) over the LLM-drafted rows.
-
-    Only ``source == "llm"`` rows count towards the brief's mix, so the user can
-    add their own ``source: "human"`` questions without breaking validation.
-    """
+    """(rows per type, in-scope rows per chapter) over the ``source == "llm"`` rows only."""
     drafted = [r for r in rows if r.source == "llm"]
     types = Counter(r.type for r in drafted)
     chapters = Counter(r.chapter for r in drafted if r.type == "in_scope")
@@ -158,12 +147,7 @@ def dataset_counts(rows: list[GoldenRow]) -> tuple[dict[str, int], dict[int, int
 
 
 def check_mix(rows: list[GoldenRow]) -> None:
-    """Fail unless the type and chapter counts match the brief exactly.
-
-    Applied to the whole file, not the reviewed subset — reviewing is a
-    separate gate (MIN_REVIEWED_ROWS) and a half-reviewed file is not a
-    drafting error.
-    """
+    """Fail unless the type and chapter counts match the brief exactly."""
     types, chapters = dataset_counts(rows)
     problems = []
     for name, want in EXPECTED_TYPE_COUNTS.items():
@@ -191,13 +175,7 @@ def load_golden(
     settings: Settings | None = None,
     validate_mix: bool = True,
 ) -> list[GoldenRow]:
-    """Load and validate the golden dataset.
-
-    By default only reviewed rows are returned. ``include_unreviewed`` is for
-    dry runs only; any run using it must be labelled dry-run and is never
-    committed as a baseline. ``validate_mix`` is only turned off by tests that
-    exercise row-level validation on a deliberately small file.
-    """
+    """Load and validate the golden dataset; by default only reviewed rows."""
     settings = settings or get_settings()
     path = path or settings.golden_path
     if not path.exists():
