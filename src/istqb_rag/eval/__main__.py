@@ -153,11 +153,11 @@ def main() -> None:
         if args.command == "readme-tables":
             from pathlib import Path as _Path
 
-            from istqb_rag.eval.readme_tables import write_readme_tables
+            from istqb_rag.eval.readme_tables import write_results_tables
 
-            readme = _Path(__file__).resolve().parents[3] / "README.md"
-            changed = write_readme_tables(readme)
-            print(f"{'updated' if changed else 'already up to date'}: {readme}")
+            results = _Path(__file__).resolve().parents[3] / "docs" / "results.md"
+            changed = write_results_tables(results)
+            print(f"{'updated' if changed else 'already up to date'}: {results}")
             return
 
         if args.command == "variance":

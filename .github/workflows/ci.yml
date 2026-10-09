@@ -30,7 +30,7 @@ jobs:
         run: uv run pytest -q
 
       # CI has no syllabus PDF and no API keys, so it cannot reproduce a score.
-      # This guards the honesty of the published results instead: that README
+      # This guards the honesty of the published results instead: that docs/results.md
       # numbers are generated from the run files, every run is complete, no
       # committed file can hold syllabus text, and the dataset still validates.
       - name: Results integrity

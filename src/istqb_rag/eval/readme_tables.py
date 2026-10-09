@@ -1,4 +1,4 @@
-"""Build the README's results tables from the run files, so no number is hand-typed."""
+"""Build docs/results.md's tables from the run files, so no number is hand-typed."""
 
 import json
 from pathlib import Path
@@ -220,13 +220,13 @@ def missing_markers(readme: str, tables: dict[str, str]) -> list[str]:
     ]
 
 
-def write_readme_tables(readme_path: Path, settings: Settings | None = None) -> bool:
-    """Rewrite the README's generated blocks. True when the file changed."""
+def write_results_tables(results_path: Path, settings: Settings | None = None) -> bool:
+    """Rewrite the results doc's generated blocks. True when the file changed."""
     tables = build_tables(settings)
-    original = readme_path.read_text(encoding="utf-8")
+    original = results_path.read_text(encoding="utf-8")
     updated = apply_tables(original, tables)
     if updated != original:
-        readme_path.write_text(updated, encoding="utf-8")
+        results_path.write_text(updated, encoding="utf-8")
     return updated != original
 
 

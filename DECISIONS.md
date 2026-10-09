@@ -114,7 +114,7 @@ A repeat of the unchanged baseline reproduced both of them.
 wording only.**
 The 150-word rule allowed long answers that restated the excerpts.
 `PROMPT_VERSION` is recorded in every new run's config.json. **Every run in
-`runs/` and every number in the README was produced with version 1.** A
+`runs/` and every number in docs/results.md was produced with version 1.** A
 judge-free check (`prompt-v2-check`) showed no change in citation rate,
 citation validity, page hit rate, scope accuracy or answer rate, and no row
 changed status; answer length moved only slightly (median 55 to 50 words) and
@@ -151,14 +151,14 @@ row whose retrieved pages were never recorded is *unvalidatable*, not invalid.
 ids, statuses, scores, page numbers and an answer hash.
 
 **No published number may come from a gitignored file.**
-Two paths read `answers.jsonl` to build README tables, which worked locally and
+Two paths read `answers.jsonl` to build results-doc tables, which worked locally and
 failed on a clean checkout. `scores.csv` now carries `retrieved_pages`,
 `format_fallback` and `answer_sha256` natively.
 
 **A missing value in a published table fails the build.**
 Rendering `n/a` instead of crashing is only safe if something refuses to ship it.
 
-**README results tables are generated, never typed.**
+**Results-doc tables are generated, never typed.**
 CI regenerates them in memory and fails on any difference.
 
 **CI cannot verify scores, and says so.**

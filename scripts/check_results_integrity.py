@@ -21,12 +21,12 @@ REQUIRED_RUN_FILES = ("config.json", "scores.csv", "summary.json", "report.md")
 ALLOWED_SCORE_COLUMNS = set(SCORES_COLUMNS)
 
 
-def check_readme_tables(problems: list[str]) -> None:
-    readme = REPO_ROOT / "README.md"
-    if not readme.exists():
-        problems.append("README.md is missing")
+def check_results_tables(problems: list[str]) -> None:
+    results = REPO_ROOT / "docs" / "results.md"
+    if not results.exists():
+        problems.append("docs/results.md is missing")
         return
-    original = readme.read_text(encoding="utf-8")
+    original = results.read_text(encoding="utf-8")
     tables = build_tables()
 
     incomplete = cells_with_missing_values(tables)
@@ -34,14 +34,14 @@ def check_readme_tables(problems: list[str]) -> None:
         problems.append(
             "published table(s) contain a missing value (n/a): "
             + ", ".join(incomplete)
-            + " — a README number could not be computed from the committed run "
+            + " — a published number could not be computed from the committed run "
             "files, which usually means a run is missing a column"
         )
 
     absent = missing_markers(original, tables)
     if absent:
         problems.append(
-            "README.md is missing result markers for: "
+            "docs/results.md is missing result markers for: "
             + ", ".join(absent)
             + " (expected <!-- results:<name>:start --> / :end -->)"
         )
@@ -50,7 +50,7 @@ def check_readme_tables(problems: list[str]) -> None:
     regenerated = apply_tables(original, tables)
     if regenerated != original:
         problems.append(
-            "README.md results tables do not match the run files. "
+            "docs/results.md results tables do not match the run files. "
             "They are generated, not hand-written — run:\n"
             "    uv run python -m istqb_rag.eval readme-tables"
         )
@@ -98,7 +98,7 @@ def check_golden_dataset(problems: list[str]) -> None:
 
 def main() -> int:
     problems: list[str] = []
-    check_readme_tables(problems)
+    check_results_tables(problems)
     check_runs_complete(problems)
     check_scores_columns(problems)
     check_golden_dataset(problems)

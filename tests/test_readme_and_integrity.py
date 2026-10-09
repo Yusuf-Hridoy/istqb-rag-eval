@@ -1,4 +1,4 @@
-"""Offline tests for the generated README tables and the CI results-integrity gate."""
+"""Offline tests for the generated results tables and the CI results-integrity gate."""
 
 import csv
 import json
@@ -46,12 +46,12 @@ def test_half_a_marker_pair_counts_as_missing():
     assert missing_markers(marker("baseline"), {"baseline": "x"}) == ["baseline"]
 
 
-def test_the_real_readme_is_in_sync_with_the_run_files():
-    """Same assertion CI makes, so a stale README fails locally too."""
+def test_the_real_results_doc_is_in_sync_with_the_run_files():
+    """Same assertion CI makes, so a stale results doc fails locally too."""
     from istqb_rag.eval.readme_tables import build_tables
 
-    readme_path = REPO_ROOT / "README.md"
-    original = readme_path.read_text(encoding="utf-8")
+    results_path = REPO_ROOT / "docs" / "results.md"
+    original = results_path.read_text(encoding="utf-8")
     tables = build_tables()
     assert missing_markers(original, tables) == []
     assert apply_tables(original, tables) == original
